@@ -73,6 +73,11 @@ async function scenarioFrom(params: Promise<{ scenarioId: string }>) {
   return scenario;
 }
 
+// The learner sees a short message; the logs need the database's own reason.
+function logDbError(action: string, error: { code?: string; message?: string; hint?: string | null }) {
+  console.error(`simulation_sessions ${action} failed`, { code: error.code, message: error.message, hint: error.hint });
+}
+
 async function readSession(userId: string, scenario: ProjectScenario) {
   const { data, error } = await recordDb()
     .from("simulation_sessions")
@@ -82,7 +87,10 @@ async function readSession(userId: string, scenario: ProjectScenario) {
     .eq("lesson_id", LESSON_ID)
     .eq("activity_id", scenario.id)
     .maybeSingle();
-  if (error) throw new HttpError(503, "Could not load your project. Please retry.");
+  if (error) {
+    logDbError("read", error);
+    throw new HttpError(503, "Could not load your project. Please retry.");
+  }
   return (data as SessionRow | null) ?? null;
 }
 
@@ -133,6 +141,7 @@ async function createSession(userId: string, scenario: ProjectScenario): Promise
       const existing = await readSession(userId, scenario);
       if (existing) return existing;
     }
+    logDbError("insert", error);
     throw new HttpError(503, "Could not start the project. Please retry.");
   }
   return data as SessionRow;
@@ -150,7 +159,12 @@ async function save(
     .select("id,run_id,activity_snapshot,state,history,version")
     .single();
   if (error || !data) {
-    throw new HttpError(409, "Your project changed in another tab. Reload the page and try again.");
+    // No row matched the expected version: another tab saved first.
+    if (!error || error.code === "PGRST116") {
+      throw new HttpError(409, "Your project changed in another tab. Reload the page and try again.");
+    }
+    logDbError("update", error);
+    throw new HttpError(503, "Could not save your project. Please retry.");
   }
   return data as SessionRow;
 }
