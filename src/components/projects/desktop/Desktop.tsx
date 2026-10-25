@@ -166,7 +166,7 @@ export function Desktop({
 
   if (!ready || !user || !view) {
     return (
-      <div className="grid h-full place-items-center p-4" style={WALLPAPER}>
+      <div className="grid h-full place-items-center p-4 text-stone-900" style={WALLPAPER}>
         <div className="w-full max-w-md rounded-2xl border border-white/40 bg-white/85 p-6 text-center shadow-2xl backdrop-blur-xl">
           <h1 className="text-xl font-bold text-stone-900">{title}</h1>
           {!ready ? (
@@ -214,8 +214,10 @@ export function Desktop({
     }
   }
 
+  // The site's default text is light for the dark public pages; the desktop's
+  // windows are light, so it sets its own dark default.
   return (
-    <div className="relative h-full overflow-hidden font-sans" style={WALLPAPER}>
+    <div className="relative h-full overflow-hidden font-sans text-stone-900" style={WALLPAPER}>
       {/* Menu bar */}
       <header className="absolute inset-x-0 top-0 z-[960] flex h-7 items-center gap-4 bg-white/40 px-3 text-[13px] text-stone-900 backdrop-blur-xl">
         <Link href="/" aria-label="Leave the desktop and return to DevPath" className="font-bold tracking-tight">◆</Link>
