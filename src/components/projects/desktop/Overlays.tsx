@@ -1,7 +1,7 @@
 "use client";
 
 import type { ProjectView } from "@/lib/projects/runtime";
-import { Avatar } from "./icons";
+import { AppIcon, Avatar } from "./icons";
 import { CAST, STEPS, guideFor, stepIndex, type AppId, type Send } from "./config";
 
 /** Opening sheet: the job, the cast and the choice of role. */
@@ -108,14 +108,24 @@ export function Report({ view, busy, onClose, onRestart, exitHref }: { view: Pro
   );
 }
 
-export type Notice = { id: number; app: AppId | null; title: string; body: string };
+/**
+ * A banner. `mailId` opens that message; a `sticky` banner stays until the
+ * learner opens its app or the stage moves on.
+ */
+export type Notice = { id: number; app: AppId | null; title: string; body: string; mailId?: string; sticky?: boolean };
 
 /** macOS-style notification banners, top right. Click to open the app. */
 export function Notifications({ notices, onOpen, onDismiss }: { notices: Notice[]; onOpen: (notice: Notice) => void; onDismiss: (id: number) => void }) {
   return (
     <div className="pointer-events-none absolute right-3 top-9 z-[950] flex w-[22rem] max-w-[calc(100%-1.5rem)] flex-col gap-2" aria-live="polite">
       {notices.map((notice) => (
-        <div key={notice.id} className="pointer-events-auto flex items-start gap-3 rounded-2xl border border-white/50 bg-white/85 p-3 text-[13px] shadow-xl backdrop-blur-xl">
+        <div
+          key={notice.id}
+          className={`pointer-events-auto flex items-start gap-3 rounded-2xl border bg-white/85 p-3 text-[13px] shadow-xl backdrop-blur-xl ${
+            notice.sticky ? "border-blue-400 ring-2 ring-blue-400/40" : "border-white/50"
+          }`}
+        >
+          {notice.app && <AppIcon app={notice.app} size={32} />}
           <button type="button" onClick={() => onOpen(notice)} className="min-w-0 flex-1 text-left">
             <p className="font-semibold text-stone-900">{notice.title}</p>
             <p className="mt-0.5 text-stone-700">{notice.body}</p>

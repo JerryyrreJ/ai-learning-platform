@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-store";
 import type { ProjectView } from "@/lib/projects/runtime";
-import { APPS, DOCK, STAGE_APP, type AppId, type Op } from "./config";
+import { APPS, DOCK, STAGE_APP, nextStep, type AppId, type Op } from "./config";
 import { AppIcon } from "./icons";
 import { mailbox } from "./mail";
 import { Briefing, Notifications, ProjectWidget, Report, type Notice } from "./Overlays";
@@ -23,29 +23,9 @@ const WALLPAPER = {
     "radial-gradient(120% 80% at 15% 110%, #f59e0b 0%, rgba(245,158,11,0) 45%), radial-gradient(90% 70% at 85% 105%, #db2777 0%, rgba(219,39,119,0) 50%), radial-gradient(120% 90% at 50% -10%, #1e3a8a 0%, rgba(30,58,138,0) 60%), linear-gradient(180deg, #312e81 0%, #7c3aed 45%, #f472b6 100%)",
 };
 
-/** What each stage announces when the learner reaches it. */
-function noticeFor(view: ProjectView): Omit<Notice, "id"> | null {
-  switch (view.stage.id) {
-    case "inbox":
-      return { app: "mail", title: "Mail", body: `${view.inbox.length} new messages, including one from ${view.scenario.client.name}.` };
-    case "interview":
-      return { app: "call", title: `${view.scenario.client.name} is calling`, body: "Open Meet to take the call." };
-    case "requirements":
-      return { app: "notes", title: "Call ended", body: "Write the requirements in Notes while it's fresh." };
-    case "brief":
-      return { app: "cody", title: "Requirements shared", body: "Cody is ready for its task." };
-    case "review":
-      return {
-        app: "review",
-        title: "Cody",
-        body: view.track === "engineering" ? "Opened a pull request: review it before it reaches main." : "Recorded a walkthrough of the booking board. Review it.",
-      };
-    case "release":
-      return { app: "launch", title: "Approved", body: "Plan how the clinic gets the booking board." };
-    default:
-      return null;
-  }
-}
+// Mail arrives one message at a time, each with a banner, so none is missed.
+const FIRST_MAIL_DELAY = 800;
+const MAIL_GAP = 2500;
 
 function defaultFrame(index: number): WindowFrame {
   const vw = typeof window === "undefined" ? 1280 : window.innerWidth;
@@ -74,11 +54,18 @@ export function Desktop({
   const [focused, setFocused] = useState<AppId | null>(null);
   const [notices, setNotices] = useState<Notice[]>([]);
   const [read, setRead] = useState<Set<string>>(new Set());
+  // Mail the learner has received. null until the first view decides what already arrived.
+  const [delivered, setDelivered] = useState<Set<string> | null>(null);
+  const [mailSelected, setMailSelected] = useState<string | null>(null);
+  // The stage whose app the learner has opened; until then its Dock icon asks for attention.
+  const [attended, setAttended] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [compact, setCompact] = useState(false);
   const zTop = useRef(10);
   const noticeId = useRef(0);
   const lastStage = useRef<string | null>(null);
+  const stageApp = useRef<AppId | null>(null);
+  const lastDelivery = useRef(0);
 
   useEffect(() => {
     const update = () => setCompact(window.innerWidth < 900);
@@ -87,10 +74,15 @@ export function Desktop({
     return () => window.removeEventListener("resize", update);
   }, []);
 
+  // At most one sticky banner (the next step) plus the three latest others.
   const notify = useCallback((notice: Omit<Notice, "id">) => {
     const id = ++noticeId.current;
-    setNotices((list) => [...list.slice(-2), { ...notice, id }]);
-    window.setTimeout(() => setNotices((list) => list.filter((item) => item.id !== id)), 7000);
+    setNotices((list) => {
+      const sticky = list.filter((item) => item.sticky && !notice.sticky);
+      const others = list.filter((item) => !item.sticky).slice(notice.sticky ? -3 : -2);
+      return [...sticky, ...others, { ...notice, id }];
+    });
+    if (!notice.sticky) window.setTimeout(() => setNotices((list) => list.filter((item) => item.id !== id)), 7000);
   }, []);
 
   const openApp = useCallback((app: AppId) => {
@@ -107,6 +99,10 @@ export function Desktop({
       };
     });
     setFocused(app);
+    if (app === stageApp.current) {
+      setAttended(lastStage.current);
+      setNotices((list) => list.filter((item) => !item.sticky));
+    }
   }, []);
 
   const patchWindow = useCallback((app: AppId, patch: Partial<WindowState>) => {
@@ -143,26 +139,51 @@ export function Desktop({
     if (ready && user) void send({ op: "start" });
   }, [ready, user, send]);
 
-  // A new stage brings its app forward and announces itself.
+  // A new stage never opens an app by itself: a banner and the Dock say what to open.
   useEffect(() => {
     if (!view) return;
     const stage = view.status === "completed" ? "completed" : view.stage.id;
     if (stage === lastStage.current) return;
-    const first = lastStage.current === null;
     lastStage.current = stage;
+    setAttended(null);
+    setNotices((list) => list.filter((item) => !item.sticky));
     if (stage === "completed") {
+      stageApp.current = null;
       setReportOpen(true);
       return;
     }
-    const app = STAGE_APP[view.stage.id];
-    if (app) openApp(app);
-    if (!first || stage === "inbox") {
-      const notice = noticeFor(view);
-      if (notice) notify(notice);
-    }
-  }, [view, openApp, notify]);
+    const app = STAGE_APP[view.stage.id] ?? null;
+    stageApp.current = app;
+    const step = nextStep(view);
+    if (app && step) notify({ app, title: "Next step", body: step, sticky: true });
+  }, [view, notify]);
 
-  const markRead = useCallback((id: string) => setRead((set) => new Set(set).add(id)), []);
+  // On the first view, mail that already arrived in an earlier visit is not replayed.
+  useEffect(() => {
+    if (!view || delivered) return;
+    const fresh = view.stage.id === "choose-track" && view.status === "active";
+    setDelivered(new Set(fresh ? [] : mailbox(view).map((mail) => mail.id)));
+  }, [view, delivered]);
+
+  // Deliver the oldest waiting message, then the next after a gap.
+  useEffect(() => {
+    if (!view || !delivered || (view.stage.id === "choose-track" && view.status === "active")) return;
+    const waiting = mailbox(view).reverse().filter((mail) => !delivered.has(mail.id));
+    const mail = waiting[0];
+    if (!mail) return;
+    const gap = delivered.size ? MAIL_GAP : FIRST_MAIL_DELAY;
+    const timer = window.setTimeout(() => {
+      lastDelivery.current = Date.now();
+      setDelivered((set) => new Set(set).add(mail.id));
+      notify({ app: "mail", mailId: mail.id, title: mail.from, body: mail.subject });
+    }, Math.max(FIRST_MAIL_DELAY, gap - (Date.now() - lastDelivery.current)));
+    return () => window.clearTimeout(timer);
+  }, [view, delivered, notify]);
+
+  const selectMail = useCallback((id: string | null) => {
+    setMailSelected(id);
+    if (id) setRead((set) => new Set(set).add(id));
+  }, []);
 
   if (!ready || !user || !view) {
     return (
@@ -191,16 +212,20 @@ export function Desktop({
     );
   }
 
-  const unreadMail = mailbox(view).filter((mail) => !read.has(mail.id)).length;
-  const stageApp = view.status === "active" ? STAGE_APP[view.stage.id] : null;
+  const mails = mailbox(view).filter((mail) => delivered?.has(mail.id));
+  const unreadMail = mails.filter((mail) => !read.has(mail.id)).length;
   const choosing = view.stage.id === "choose-track" && view.status === "active";
+  const needed = view.status === "active" && !choosing ? STAGE_APP[view.stage.id] : null;
+  // The app the learner should open next, until they open it.
+  const attention = needed && attended !== view.stage.id ? needed : null;
+  const step = choosing ? null : nextStep(view);
   const day = Math.min(view.meters.effortMax, view.meters.effort + 1);
 
   function renderApp(app: AppId) {
     if (!view) return null;
     switch (app) {
       case "mail":
-        return <MailApp view={view} busy={busy} send={send} read={read} onRead={markRead} />;
+        return <MailApp view={view} busy={busy} send={send} mails={mails} read={read} selected={mailSelected} onSelect={selectMail} />;
       case "call":
         return <CallApp view={view} busy={busy} send={send} />;
       case "notes":
@@ -222,7 +247,18 @@ export function Desktop({
       <header className="absolute inset-x-0 top-0 z-[960] flex h-7 items-center gap-4 bg-white/40 px-3 text-[13px] text-stone-900 backdrop-blur-xl">
         <Link href="/" aria-label="Leave the desktop and return to DevPath" className="font-bold tracking-tight">◆</Link>
         <span className="font-semibold">{focused ? APPS[focused].name : "Finder"}</span>
-        <span className="hidden text-stone-700 sm:inline">{view.scenario.title}</span>
+        {step && needed ? (
+          <button
+            type="button"
+            onClick={() => openApp(needed)}
+            className="min-w-0 truncate rounded px-1.5 text-stone-800 hover:bg-white/50"
+            title="Open the app for the next step"
+          >
+            <span className="font-semibold text-blue-700">Next:</span> {step}
+          </button>
+        ) : (
+          <span className="hidden truncate text-stone-700 sm:inline">{view.scenario.title}</span>
+        )}
         <span className="ml-auto tabular-nums text-stone-800">
           {view.status === "completed" ? "Job finished" : `Day ${day} of ${view.meters.effortMax}`}
         </span>
@@ -267,14 +303,16 @@ export function Desktop({
         <ul className="flex items-end gap-2 overflow-x-auto rounded-[22px] border border-white/40 bg-white/30 px-2.5 pb-1.5 pt-2 shadow-2xl backdrop-blur-2xl">
           {DOCK.map((app) => {
             const running = windows[app]?.open;
-            const badge = app === "mail" ? unreadMail : app === stageApp && !(running && focused === app) ? 1 : 0;
+            const badge = app === "mail" ? unreadMail : app === attention ? 1 : 0;
             return (
               <li key={app} className="relative">
                 <button
                   type="button"
                   onClick={() => openApp(app)}
                   aria-label={`${APPS[app].name}${badge ? `, ${badge} new` : ""}`}
-                  className="group flex flex-col items-center transition-transform duration-150 hover:-translate-y-2 motion-reduce:transition-none"
+                  className={`group flex flex-col items-center transition-transform duration-150 hover:-translate-y-2 motion-reduce:transition-none ${
+                    app === attention ? "animate-[dock-attention_3s_ease-in-out_infinite] motion-reduce:animate-none" : ""
+                  }`}
                 >
                   <span className="pointer-events-none absolute -top-8 hidden whitespace-nowrap rounded-md bg-stone-800/80 px-2 py-0.5 text-[12px] text-white group-hover:block">{APPS[app].name}</span>
                   <AppIcon app={app} size={compact ? 42 : 50} />
@@ -292,6 +330,7 @@ export function Desktop({
       <Notifications
         notices={notices}
         onOpen={(notice) => {
+          if (notice.mailId) selectMail(notice.mailId);
           if (notice.app) openApp(notice.app);
           setNotices((list) => list.filter((item) => item.id !== notice.id));
         }}
@@ -311,6 +350,9 @@ export function Desktop({
               setWindows({});
               setFocused(null);
               setRead(new Set());
+              setDelivered(new Set());
+              setMailSelected(null);
+              setNotices([]);
               lastStage.current = null;
             }
           }}
