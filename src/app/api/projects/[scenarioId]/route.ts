@@ -6,7 +6,8 @@ import type {
   SimulationState,
 } from "@/lib/learning/simulation/engine";
 import { getProjectScenario } from "@/lib/projects";
-import { offlineEvaluator } from "@/lib/projects/evaluate";
+import { enforceQuota } from "@/lib/ai/quota";
+import { aiEvaluator } from "@/lib/projects/ai-evaluator";
 import {
   askClient,
   chooseAction,
@@ -27,6 +28,9 @@ import type { ProjectScenario } from "@/lib/projects/types";
  */
 
 const LESSON_ID = "run";
+
+// A step may try two models before falling back, each with its own timeout.
+export const maxDuration = 60;
 
 const bodySchema = z.discriminatedUnion("op", [
   z.object({ op: z.literal("start") }),
@@ -208,7 +212,7 @@ export async function POST(
 ) {
   try {
     const scenario = await scenarioFrom(params);
-    const { user } = await requireAccount();
+    const { db, user } = await requireAccount();
     const body = bodySchema.parse(await req.json().catch(() => null));
     const existing = await readSession(user.id, scenario);
 
@@ -235,7 +239,15 @@ export async function POST(
       throw new HttpError(409, "This project was updated since you started. Restart to continue.");
     }
     const state = stateOf(existing);
-    const evaluator = offlineEvaluator;
+    // A spent allowance or a broken quota check never blocks the learner: that
+    // step is graded by the keywords instead.
+    const evaluator = aiEvaluator({
+      allow: (bucket) =>
+        enforceQuota(db, user.id, bucket).then(
+          () => true,
+          () => false,
+        ),
+    });
 
     if (body.op === "ask") {
       const result = await askClient(scenario, state, body.question, evaluator);

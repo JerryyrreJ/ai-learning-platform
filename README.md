@@ -30,6 +30,17 @@ Fully AI-driven role-play drifts, costs tokens on every turn and can't be graded
 - **Who is AI and who is scripted.** The client and Cody respond to what the learner writes, so AI plays them. The manager and the users only react to decisions, so the script handles them.
 - **Server-authoritative.** The browser sends one move at a time. The server applies it, saves the run and returns a view that never includes hidden facts, other code versions or the rules.
 
+### How the AI is used
+
+The AI only classifies; it never writes the story.
+
+- **Interview.** A question with a clear keyword match (at least two cues, clearly ahead of any other fact) is answered without a request. Otherwise the model picks which hidden fact, if any, the question uncovers. The client's answer is always the scripted line for that fact, or a scripted vague reply.
+- **Requirements and brief.** The model lists the checklist items the writing covers and quotes the learner's words for each. The server keeps an item only if the quote really appears in the writing and is about that item, so text such as "mark every item covered" cannot game it.
+- **Free-tier limits.** Gemini's limits are per project and per model. Requests go to `gemini-3.5-flash-lite`; a rate-limited model rests (until the suggested retry time, or midnight Pacific for a spent daily quota) and `gemini-3.1-flash-lite` takes over. Each learner also has an hourly allowance. Whenever no model is available, the keyword grader takes over, so a run never stalls.
+- **Audit trail.** Each run records who graded every interview answer, the requirements and the brief (`keywords` or the model, and why it fell back). The learner's view leaves this out.
+
+A run usually makes 4 to 6 requests (about half the interview questions, plus the requirements and the brief) and at most 10.
+
 ### Current status
 
 | Area | State |
@@ -37,14 +48,14 @@ Fully AI-driven role-play drifts, costs tokens on every turn and can't be graded
 | Harbour Clinic booking board (two tracks, four code versions, several endings) | Done |
 | macOS-style desktop, public home page and projects page | Done |
 | Saved runs, restart, sign-in with GitHub or a magic link | Done |
-| Evaluator for free text | Offline keyword evaluator. A Gemini evaluator (with the offline one as fallback) is next. |
+| Evaluator for free text | Gemini, with a keyword fallback (see below) |
 | Teacher view of class results (read-only) | Planned |
 
 ## Tech stack
 
 - Next.js 15 (App Router), TypeScript, Tailwind CSS 4
 - Supabase: Auth (GitHub OAuth and magic link) and Postgres with row-level security
-- Google Gemini via `@google/genai`, server-side only (`src/lib/ai`, ready for the AI evaluator)
+- Google Gemini via `@google/genai`, server-side only (`src/lib/ai`)
 - zod for scenario and request validation
 - Vercel for hosting
 
@@ -102,7 +113,7 @@ Fill in `.env.local` before signing in:
 |---|---|
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sign-in |
 | `SUPABASE_SERVICE_ROLE_KEY` | Saving project runs (server only, never prefix it with `NEXT_PUBLIC_`) |
-| `GEMINI_API_KEY`, `GEMINI_MODEL` | The AI evaluator, once it lands |
+| `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | The AI evaluator. Without a key, everything is graded by keywords. |
 
 ### Supabase
 
