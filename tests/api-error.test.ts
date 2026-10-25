@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { PostgrestError } from "@supabase/postgrest-js";
-import { apiError, HttpError } from "../src/lib/supabase/server";
+import { apiError, HttpError, redactSecrets, serviceRoleKey } from "../src/lib/supabase/server";
 
 async function body(error: unknown) {
   const response = apiError(error);
@@ -71,4 +71,21 @@ test("apiError does not return raw Error text", async () => {
   const blank = await body("nope");
   assert.equal(blank.status, 500);
   assert.equal(blank.json.error, "Request failed.");
+});
+
+test("the service key ignores whitespace pasted into it", () => {
+  assert.equal(serviceRoleKey("sb_secret_abcDE\nfgh-123_xyz\n"), "sb_secret_abcDEfgh-123_xyz");
+  assert.equal(serviceRoleKey("  sb_secret_abc  "), "sb_secret_abc");
+  assert.equal(serviceRoleKey("   "), undefined);
+  assert.equal(serviceRoleKey(undefined), undefined);
+});
+
+test("logged errors never contain Supabase keys or JWTs", () => {
+  const message = 'TypeError: Headers.set: "sb_secret_abcDE\ngXb-123_z" is an invalid header value.';
+  const redacted = redactSecrets(message);
+  assert.equal(redacted.includes("abcDE"), false);
+  assert.equal(redacted.includes("gXb"), false);
+  assert.match(redacted, /sb_secret_\[redacted\]" is an invalid header value\./);
+  assert.equal(redactSecrets("key sb_publishable_Abc-1 used"), "key sb_publishable_[redacted] used");
+  assert.equal(redactSecrets("token eyJhbGc.eyJyb2xl.c2lnbmF0dXJl here"), "token [redacted jwt] here");
 });
