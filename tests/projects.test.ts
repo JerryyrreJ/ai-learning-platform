@@ -17,6 +17,7 @@ import {
   startProject,
   submitBrief,
   submitRequirements,
+  memoOf,
   type ProjectStep,
 } from "../src/lib/projects/runtime";
 
@@ -37,7 +38,15 @@ function track(history: SimulationHistory, step: ProjectStep) {
   return step.state;
 }
 
-async function throughInterview(trackAction: "pick-product" | "pick-engineering") {
+// With the keyword grader the standard questions uncover three facts (F1, F3, F6);
+// these uncover the other three, for a thorough call.
+const MORE_QUESTIONS = [
+  "What do you do with the records when a booking is cancelled?",
+  "What computer and browser does reception use?",
+  "How long is each appointment slot?",
+];
+
+async function throughInterview(trackAction: "pick-product" | "pick-engineering", extra: string[] = []) {
   const history: SimulationHistory = [];
   let state = startProject(scenario);
   state = track(history, chooseAction(scenario, state, trackAction));
@@ -47,6 +56,7 @@ async function throughInterview(trackAction: "pick-product" | "pick-engineering"
     "What happens to an appointment when a patient cancels?",
     "Who will use it, and what's the budget?",
     "How will you know it's fixed? What would success look like?",
+    ...extra,
   ]) {
     state = (await askClient(scenario, state, question, offlineEvaluator)).state;
   }
@@ -193,4 +203,70 @@ test("the learner view never exposes variants, checklists or hidden facts before
   // Only facts the learner actually uncovered appear in their notes.
   const view = projectView(scenario, state, run.history);
   assert.ok(!view.notes.some((note) => note.includes("Dr Chan")));
+});
+
+test("a thorough call, a success measure, a measured release and success take trust to 10", async () => {
+  const run = await throughInterview("pick-engineering", MORE_QUESTIONS);
+  let state = run.state;
+  assert.equal(memoOf(state).interview.revealed.length, 6);
+  state = track(run.history, await submitRequirements(scenario, state, GOOD_REQUIREMENTS, offlineEvaluator));
+  state = track(run.history, await submitBrief(scenario, state, GOOD_BRIEF, offlineEvaluator));
+  state = track(run.history, chooseAction(scenario, state, "approve"));
+  state = track(run.history, chooseAction(scenario, state, "release-measure"));
+  assert.equal(state.outcome, "success");
+  assert.equal(state.variables.trust, 10);
+
+  const trust = projectView(scenario, state, run.history).completion?.trust;
+  assert.equal(trust?.start, 5);
+  assert.deepEqual(
+    trust?.changes.map((change) => change.delta),
+    [1, 1, 1, 1, 1],
+  );
+  assert.deepEqual(trust?.changes.map((change) => change.reason), [
+    scenario.trust.reasons["call-grace"],
+    scenario.trust.reasons["end-interview-thorough"],
+    scenario.trust.reasons["requirements-metric"],
+    scenario.trust.reasons["release-measure"],
+    scenario.trust.outcome.success?.reason,
+  ]);
+  // The outcome's change is applied once, even if the view is built again.
+  assert.equal(projectView(scenario, state, run.history).completion?.trust.changes.length, 5);
+});
+
+test("a short call earns no trust bonus", async () => {
+  const run = await throughInterview("pick-engineering");
+  assert.equal(memoOf(run.state).interview.revealed.length, 3);
+  assert.equal(run.state.variables.trust, 6);
+  assert.equal(run.history.at(-1)?.actionId, "end-interview");
+});
+
+test("switching everyone over at once costs trust, and a partial result adds nothing", async () => {
+  const run = await throughInterview("pick-engineering", MORE_QUESTIONS);
+  let state = run.state;
+  state = track(run.history, await submitRequirements(scenario, state, GOOD_REQUIREMENTS, offlineEvaluator));
+  state = track(run.history, await submitBrief(scenario, state, GOOD_BRIEF, offlineEvaluator));
+  state = track(run.history, chooseAction(scenario, state, "approve"));
+  state = track(run.history, chooseAction(scenario, state, "release-now"));
+  assert.equal(state.outcome, "partial");
+  // 5 + call + thorough + measure - release now
+  assert.equal(state.variables.trust, 7);
+  assert.equal(memoOf(state).outcomeTrust, undefined);
+});
+
+test("a release that goes wrong loses two more points of trust", async () => {
+  const run = await throughInterview("pick-engineering");
+  let state = run.state;
+  state = track(run.history, await submitRequirements(scenario, state, GOOD_REQUIREMENTS, offlineEvaluator));
+  state = track(
+    run.history,
+    await submitBrief(scenario, state, "Build a staff-only booking board. Cancelling marks it cancelled, never delete. No patient app.", offlineEvaluator),
+  );
+  assert.equal(state.variables.variant, "race");
+  state = track(run.history, chooseAction(scenario, state, "approve"));
+  state = track(run.history, chooseAction(scenario, state, "release-now"));
+  assert.equal(state.outcome, "failure");
+  // 5 + call + measure - release now - failure
+  assert.equal(state.variables.trust, 4);
+  const changes = projectView(scenario, state, run.history).completion?.trust.changes ?? [];
+  assert.deepEqual(changes.at(-1), { delta: -2, reason: scenario.trust.outcome.failure?.reason });
 });

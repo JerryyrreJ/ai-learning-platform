@@ -81,6 +81,24 @@ export function Report({ view, busy, onClose, onRestart, exitHref }: { view: Pro
             <div><dt className="inline">Days used: </dt><dd className="inline font-semibold tabular-nums text-stone-900">{view.meters.effort} of {view.meters.effortMax}</dd></div>
             <div><dt className="inline">Client trust: </dt><dd className="inline font-semibold tabular-nums text-stone-900">{view.meters.trust} / 10</dd></div>
           </dl>
+          <div className="mt-4 rounded-xl border border-black/10 bg-white p-4 text-[13px]">
+            <p className="font-semibold text-stone-900">Why {view.scenario.client.name.split(" ")[0]}&apos;s trust moved</p>
+            <ul className="mt-2 space-y-1">
+              <li className="flex gap-3 text-stone-500">
+                <span className="w-8 shrink-0 text-right tabular-nums">{completion.trust.start}</span>
+                <span>Where it started</span>
+              </li>
+              {completion.trust.changes.map((change, index) => (
+                <li key={index} className="flex gap-3 text-stone-700">
+                  <span className={`w-8 shrink-0 text-right font-semibold tabular-nums ${change.delta > 0 ? "text-emerald-700" : "text-rose-700"}`}>
+                    {change.delta > 0 ? `+${change.delta}` : change.delta}
+                  </span>
+                  <span>{change.reason}</span>
+                </li>
+              ))}
+              {completion.trust.changes.length === 0 && <li className="pl-11 text-stone-500">Nothing you did changed it.</li>}
+            </ul>
+          </div>
         </div>
         <div className="border-t border-black/10 px-6 py-5">
           <h2 className="text-[15px] font-semibold text-stone-900">How you worked with AI</h2>

@@ -170,6 +170,7 @@ export const harbourClinic: ProjectScenario = {
       "Hello! Thanks for making time. So, can you build us an app? Something like the big clinics have. What do you need from me?",
     minQuestions: 3,
     maxQuestions: 8,
+    thoroughFacts: 5,
     vagueReplies: [
       "Hmm, I'm not sure what you mean. We just want the bookings to work.",
       "That's a bit technical for me. What would you like to know about how we work?",
@@ -447,6 +448,21 @@ export const harbourClinic: ProjectScenario = {
         "Cody has opened a pull request. Read the diff and the checks. Approve it, or point at the line that's wrong and request changes.",
     },
   },
+  trust: {
+    reasons: {
+      "call-grace": "You called Grace before committing to anything.",
+      "send-quote": "You sent a quote before you understood the problem.",
+      "end-interview-thorough": "Your questions got to what really goes wrong at the front desk.",
+      "requirements-metric": "You agreed a success measure with Grace: fewer than one double booking a week.",
+      "changes-wrong": "You sent Cody's work back for the wrong reason, and Grace asked why it was taking longer.",
+      "release-measure": "You released with a weekly count against Grace's target.",
+      "release-now": "You switched the whole clinic over at once, with no way to catch a problem early.",
+    },
+    outcome: {
+      success: { delta: 1, reason: "The weekly count showed the problem is solved." },
+      failure: { delta: -2, reason: "The release went wrong in front of the clinic." },
+    },
+  },
   debriefNotes: {
     missedFact: {
       F1: "You never found out when the double bookings happen. They come from two people saving at the same moment, which is exactly what the agent needed to guard against.",
@@ -560,6 +576,14 @@ export const harbourClinic: ProjectScenario = {
             feedback: "You wrap up the call and head back to write things down.",
             nextStage: "requirements",
           },
+          {
+            id: "end-interview-thorough",
+            trigger: "system",
+            label: "End the call",
+            effects: [{ op: "add", variable: "trust", value: 1 }],
+            feedback: "You wrap up the call. Grace feels heard: your questions got to what really goes wrong.",
+            nextStage: "requirements",
+          },
         ],
       },
       {
@@ -571,7 +595,7 @@ export const harbourClinic: ProjectScenario = {
             id: "requirements-metric",
             trigger: "system",
             label: "Requirements with a success measure",
-            effects: [{ op: "set", variable: "hasMetric", value: true }],
+            effects: [{ op: "set", variable: "hasMetric", value: true }, { op: "add", variable: "trust", value: 1 }],
             feedback: "Your note includes a way to tell whether the release worked.",
             nextStage: "brief",
           },
@@ -683,7 +707,7 @@ export const harbourClinic: ProjectScenario = {
             id: "release-measure",
             label: "Release to both receptionists and track double bookings for two weeks",
             availableWhen: { kind: "compare", variable: "hasMetric", op: "eq", value: true },
-            effects: [{ op: "set", variable: "release", value: "measured" }],
+            effects: [{ op: "set", variable: "release", value: "measured" }, { op: "add", variable: "trust", value: 1 }],
             feedback: "You release it and agree to count double bookings every week against Grace's target.",
           },
           {
@@ -695,7 +719,7 @@ export const harbourClinic: ProjectScenario = {
           {
             id: "release-now",
             label: "Switch both receptionists over on Monday",
-            effects: [{ op: "set", variable: "release", value: "plain" }],
+            effects: [{ op: "set", variable: "release", value: "plain" }, { op: "add", variable: "trust", value: -1 }],
             feedback: "You switch the clinic over on Monday.",
           },
         ],

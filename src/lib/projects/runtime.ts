@@ -27,6 +27,8 @@ export type ProjectMemo = {
   // `grader` records who judged the writing: the keywords or a model, and why it fell back.
   requirements?: { text: string; covered: string[]; grader?: Grader };
   brief?: { text: string; covered: string[]; variant: string; grader?: Grader };
+  /** The trust change applied once the outcome was known, if any. */
+  outcomeTrust?: { delta: number; reason: string };
   reviews: {
     variant: string;
     reasonId?: string;
@@ -115,7 +117,25 @@ export function chooseAction(
 ): ProjectStep {
   memoOf(state);
   const result = applySimulationAction(scenario.config, state, actionId);
-  return { state: result.state, events: [result.event] };
+  return { state: settleOutcome(scenario, result.state), events: [result.event] };
+}
+
+/**
+ * Completion rules have no effects, so the outcome's trust change is applied
+ * here, once, when a choice finishes the run. It is clamped like any effect and
+ * saved with its reason for the report.
+ */
+function settleOutcome(scenario: ProjectScenario, state: SimulationState): SimulationState {
+  if (state.status !== "completed" || !state.outcome) return state;
+  const memo = memoOf(state);
+  const rule = scenario.trust.outcome[state.outcome];
+  if (!rule || memo.outcomeTrust) return state;
+  const variable = scenario.config.variables.find((item) => item.id === "trust");
+  const [min, max] = variable?.type === "number" ? [variable.min, variable.max] : [0, 10];
+  const before = Number(state.variables.trust ?? 0);
+  const after = Math.min(max, Math.max(min, before + rule.delta));
+  const next = { ...state, variables: { ...state.variables, trust: after } };
+  return withMemo(next, { ...memo, outcomeTrust: { delta: after - before, reason: rule.reason } });
 }
 
 export async function askClient(
@@ -171,7 +191,9 @@ export function endInterview(scenario: ProjectScenario, state: SimulationState):
       `Ask at least ${left} more question${left === 1 ? "" : "s"} before ending the call.`,
     );
   }
-  return system(scenario, state, "end-interview");
+  // A call that uncovered most of what's wrong earns the client's trust.
+  const thorough = memo.interview.revealed.length >= scenario.interview.thoroughFacts;
+  return system(scenario, state, thorough ? "end-interview-thorough" : "end-interview");
 }
 
 export async function submitRequirements(
@@ -323,6 +345,8 @@ export type ProjectView = {
     summary: string;
     debrief: string;
     cards: ProjectCard[];
+    /** Every change to client trust, in order, with the reason the client saw. */
+    trust: { start: number; changes: { delta: number; reason: string }[] };
   } | null;
 };
 
@@ -448,6 +472,21 @@ export function projectCards(
   ];
 }
 
+/** Trust changes from the run's history, plus the outcome's change at the end. */
+function trustChanges(scenario: ProjectScenario, history: SimulationHistory, memo: ProjectMemo) {
+  const variable = scenario.config.variables.find((item) => item.id === "trust");
+  const changes: { delta: number; reason: string }[] = [];
+  for (const event of history) {
+    for (const change of event.changes) {
+      if (change.variable !== "trust") continue;
+      const delta = Number(change.to) - Number(change.from);
+      if (delta) changes.push({ delta, reason: scenario.trust.reasons[event.actionId] ?? event.actionLabel });
+    }
+  }
+  if (memo.outcomeTrust?.delta) changes.push(memo.outcomeTrust);
+  return { start: Number(variable?.initial ?? 0), changes };
+}
+
 export function projectView(
   scenario: ProjectScenario,
   state: SimulationState,
@@ -555,6 +594,7 @@ export function projectView(
             summary: state.summary ?? scenario.config.debrief[state.outcome],
             debrief: scenario.config.debrief[state.outcome],
             cards: projectCards(scenario, state, history),
+            trust: trustChanges(scenario, history, memo),
           }
         : null,
   };
