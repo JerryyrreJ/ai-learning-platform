@@ -1,4 +1,4 @@
-import type { SimulationConfig } from "@/lib/learning/simulation/schema";
+import type { SimulationConfig, SimulationOutcome } from "@/lib/learning/simulation/schema";
 
 export type Competency = "delegation" | "description" | "discernment" | "diligence";
 export type Track = "product" | "engineering";
@@ -93,6 +93,16 @@ export type ProjectScenario = {
     maxQuestions: number;
     /** Said when no fact fits the question. Rotated in order. */
     vagueReplies: string[];
+    /** Facts the learner must uncover for the call to count as thorough (a trust bonus). */
+    thoroughFacts: number;
+  };
+  /**
+   * Why client trust moved, shown in the report. `reasons` is keyed by the action
+   * whose effect changed trust; `outcome` adds a final change once the result is known.
+   */
+  trust: {
+    reasons: Record<string, string>;
+    outcome: Partial<Record<SimulationOutcome, { delta: number; reason: string }>>;
   };
   requirements: ChecklistItem[];
   brief: ChecklistItem[];
