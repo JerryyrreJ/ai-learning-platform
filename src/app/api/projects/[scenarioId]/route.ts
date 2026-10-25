@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { HttpError, recordDb, requireAccount } from "@/lib/supabase/server";
+import { HttpError, recordDb, redactSecrets, requireAccount } from "@/lib/supabase/server";
 import { simulationApiError } from "@/lib/learning/simulation/http";
 import type {
   SimulationHistory,
@@ -75,7 +75,11 @@ async function scenarioFrom(params: Promise<{ scenarioId: string }>) {
 
 // The learner sees a short message; the logs need the database's own reason.
 function logDbError(action: string, error: { code?: string; message?: string; hint?: string | null }) {
-  console.error(`simulation_sessions ${action} failed`, { code: error.code, message: error.message, hint: error.hint });
+  console.error(`simulation_sessions ${action} failed`, {
+    code: error.code,
+    message: redactSecrets(error.message ?? ""),
+    hint: redactSecrets(error.hint ?? ""),
+  });
 }
 
 async function readSession(userId: string, scenario: ProjectScenario) {

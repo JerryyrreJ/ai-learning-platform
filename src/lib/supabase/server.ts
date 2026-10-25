@@ -42,9 +42,25 @@ export async function requireAccount(teacher = false) {
     throw new HttpError(403, "Instructor access required.");
   return { db, user: data.user, isTeacher };
 }
+/**
+ * The service key from the environment. Keys never contain whitespace, so any
+ * is removed: a line break pasted into the dashboard otherwise makes every
+ * request fail with "invalid header value".
+ */
+export function serviceRoleKey(raw = process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  return raw?.replace(/\s+/g, "") || undefined;
+}
+
+/** Masks Supabase keys and JWTs, including ones broken by whitespace, before text reaches the logs. */
+export function redactSecrets(text: string) {
+  return text
+    .replace(/sb_(secret|publishable)_[A-Za-z0-9_\-\r\n]+/g, "sb_$1_[redacted]")
+    .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g, "[redacted jwt]");
+}
+
 // Only used after authorizing an activity against the user's RLS-scoped client.
 export function recordDb() {
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const key = serviceRoleKey();
   if (!key || !process.env.NEXT_PUBLIC_SUPABASE_URL)
     throw new HttpError(
       503,
@@ -89,7 +105,9 @@ function databaseCode(error: unknown) {
 export function apiError(error: unknown) {
   if (error instanceof HttpError)
     return Response.json({ error: error.message }, { status: error.status });
-  console.error(error);
+  const detail =
+    error instanceof Error ? (error.stack ?? error.message) : typeof error === "object" ? JSON.stringify(error) : String(error);
+  console.error(redactSecrets(detail));
   const mapped = DATABASE_ERRORS[databaseCode(error) ?? ""];
   if (mapped)
     return Response.json({ error: mapped.message }, { status: mapped.status });
