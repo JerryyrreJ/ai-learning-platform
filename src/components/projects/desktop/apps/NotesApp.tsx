@@ -72,7 +72,7 @@ export function NotesApp({ view, busy, send }: { view: ProjectView; busy: boolea
               rows={12}
               maxLength={3000}
               placeholder="Start typing…"
-              className="mt-4 w-full resize-y rounded-lg border border-black/10 bg-white/70 p-3 text-[14px] leading-relaxed outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+              className="mt-4 w-full resize-y rounded-lg border border-black/10 bg-white/70 p-3 text-[14px] leading-relaxed text-stone-900 caret-stone-900 placeholder:text-stone-500 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
             />
             <div className="mt-2 flex items-center gap-3">
               <button type="submit" disabled={busy || !text.trim()} className="rounded-md bg-amber-500 px-4 py-1.5 font-medium text-white shadow-sm disabled:opacity-40">

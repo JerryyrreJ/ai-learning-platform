@@ -15,6 +15,7 @@ export function Window({
   focused,
   zoomed,
   compact,
+  minimised,
   onFocus,
   onMove,
   onClose,
@@ -28,6 +29,7 @@ export function Window({
   focused: boolean;
   zoomed: boolean;
   compact: boolean;
+  minimised: boolean;
   onFocus: () => void;
   onMove: (x: number, y: number) => void;
   onClose: () => void;
@@ -57,15 +59,17 @@ export function Window({
     <section
       role="dialog"
       aria-label={title}
+      hidden={minimised}
       onPointerDown={onFocus}
       className={`absolute flex flex-col overflow-hidden border bg-white/95 backdrop-blur-xl transition-shadow ${
         full ? "rounded-none sm:rounded-xl" : "rounded-xl"
       } ${focused ? "border-black/15 shadow-[0_22px_70px_rgba(0,0,0,0.35)]" : "border-black/10 shadow-[0_10px_30px_rgba(0,0,0,0.2)]"}`}
-      style={
-        full
+      style={{
+        ...(full
           ? { left: compact ? 0 : 8, top: compact ? 28 : 34, right: compact ? 0 : 8, bottom: compact ? 76 : 92, zIndex: z }
-          : { left: frame.x, top: frame.y, width: frame.w, height: frame.h, zIndex: z }
-      }
+          : { left: frame.x, top: frame.y, width: frame.w, height: frame.h, zIndex: z }),
+        display: minimised ? "none" : undefined,
+      }}
     >
       <header
         onPointerDown={startDrag}

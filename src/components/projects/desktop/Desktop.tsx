@@ -233,7 +233,8 @@ export function Desktop({
 
       {DOCK.map((app) => {
         const state = windows[app];
-        if (!state?.open || state.minimised) return null;
+        if (!state?.open) return null;
+        // Keep minimised apps mounted so their unsubmitted drafts survive.
         return (
           <Window
             key={app}
@@ -243,6 +244,7 @@ export function Desktop({
             focused={focused === app}
             zoomed={state.zoomed}
             compact={compact}
+            minimised={state.minimised}
             onFocus={() => {
               if (focused !== app) openApp(app);
             }}
