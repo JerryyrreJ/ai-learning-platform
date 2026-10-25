@@ -25,7 +25,7 @@ export const APPS: Record<AppId, { name: string; title: string }> = {
 
 export const DOCK: AppId[] = ["mail", "call", "notes", "cody", "review", "launch"];
 
-/** The app that owns each stage. Opening a stage brings its app to the front. */
+/** The app each stage needs. The learner opens it; its Dock icon asks for attention until then. */
 export const STAGE_APP: Record<string, AppId | null> = {
   "choose-track": null,
   inbox: "mail",
@@ -50,6 +50,28 @@ export function stepIndex(view: ProjectView): number {
   if (view.status === "completed") return STEPS.length;
   const id = view.stage.id === "brief-test" ? "brief" : view.stage.id;
   return Math.max(0, STEPS.findIndex((step) => step.id === id));
+}
+
+/** One line telling the learner which app to open and what to do there. */
+export function nextStep(view: ProjectView): string | null {
+  if (view.status === "completed") return "Read the project report in Launch";
+  switch (view.stage.id) {
+    case "inbox":
+      return `Open Mail and reply to ${view.scenario.client.name.split(" ")[0]}'s email`;
+    case "interview":
+      return `Open Meet and take ${view.scenario.client.name.split(" ")[0]}'s call`;
+    case "requirements":
+      return "Open Notes and write the requirements";
+    case "brief":
+    case "brief-test":
+      return "Open Cody and write its task";
+    case "review":
+      return view.track === "engineering" ? "Open Review and check Cody's pull request" : "Open Review and watch Cody's walkthrough";
+    case "release":
+      return "Open Launch and decide how to release";
+    default:
+      return null;
+  }
 }
 
 /** What the guide widget says for the current stage. */

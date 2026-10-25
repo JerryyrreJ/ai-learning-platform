@@ -1,26 +1,28 @@
 "use client";
 
-import { useState } from "react";
 import type { ProjectView } from "@/lib/projects/runtime";
 import { Avatar } from "../icons";
 import type { Send } from "../config";
-import { mailbox } from "../mail";
+import type { Mail } from "../mail";
 
 export function MailApp({
   view,
   busy,
   send,
+  mails,
   read,
-  onRead,
+  selected,
+  onSelect,
 }: {
   view: ProjectView;
   busy: boolean;
   send: Send;
+  /** Only the messages that have arrived so far, newest first. */
+  mails: Mail[];
   read: Set<string>;
-  onRead: (id: string) => void;
+  selected: string | null;
+  onSelect: (id: string | null) => void;
 }) {
-  const mails = mailbox(view);
-  const [selected, setSelected] = useState<string | null>(null);
   const open = mails.find((mail) => mail.id === selected) ?? null;
   const deciding = view.stage.id === "inbox" && view.status === "active";
 
@@ -40,10 +42,7 @@ export function MailApp({
             <li key={mail.id}>
               <button
                 type="button"
-                onClick={() => {
-                  setSelected(mail.id);
-                  onRead(mail.id);
-                }}
+                onClick={() => onSelect(mail.id)}
                 className={`flex w-full gap-2 border-b border-black/5 px-3 py-2.5 text-left ${
                   selected === mail.id ? "bg-blue-500 text-white" : "hover:bg-black/5"
                 }`}
@@ -65,7 +64,7 @@ export function MailApp({
       <article className={`min-w-0 flex-1 overflow-y-auto ${open ? "" : "hidden sm:block"}`}>
         {open ? (
           <div className="p-5">
-            <button type="button" onClick={() => setSelected(null)} className="mb-3 text-blue-600 sm:hidden">‹ Inbox</button>
+            <button type="button" onClick={() => onSelect(null)} className="mb-3 text-blue-600 sm:hidden">‹ Inbox</button>
             <div className="flex items-start gap-3 border-b border-black/10 pb-4">
               <Avatar initials={open.initials} tone={open.tone} size={40} />
               <div className="min-w-0">

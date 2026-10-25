@@ -7,6 +7,8 @@ import type { Send } from "../config";
 
 export function CallApp({ view, busy, send }: { view: ProjectView; busy: boolean; send: Send }) {
   const [question, setQuestion] = useState("");
+  // The question being answered, shown straight away until the reply arrives.
+  const [pending, setPending] = useState<string | null>(null);
   const scroller = useRef<HTMLDivElement>(null);
   const live = view.stage.id === "interview" && view.status === "active";
   const { turns, asked, min, max, opening } = view.interview;
@@ -15,7 +17,7 @@ export function CallApp({ view, busy, send }: { view: ProjectView; busy: boolean
 
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight, behavior: "smooth" });
-  }, [turns.length]);
+  }, [turns.length, pending]);
 
   if (!happened) {
     return (
@@ -34,7 +36,10 @@ export function CallApp({ view, busy, send }: { view: ProjectView; busy: boolean
     if (!text || busy) return;
     // Clear straight away so the learner can type the next question while Grace answers.
     setQuestion("");
-    if (!(await send({ op: "ask", question: text }))) setQuestion((current) => current || text);
+    setPending(text);
+    const ok = await send({ op: "ask", question: text });
+    setPending(null);
+    if (!ok) setQuestion((current) => current || text);
   }
 
   return (
@@ -58,7 +63,12 @@ export function CallApp({ view, busy, send }: { view: ProjectView; busy: boolean
           {turns.map((turn, index) =>
             turn.role === "learner" ? <Line key={index} mine text={turn.text} /> : <Line key={index} who={client.name} text={turn.text} />,
           )}
-          {busy && live && <p className="text-stone-400">Grace is thinking…</p>}
+          {pending && (
+            <>
+              <Line mine text={pending} />
+              <p className="text-stone-400">{client.name.split(" ")[0]} is typing…</p>
+            </>
+          )}
         </div>
         {live && (
           <div className="border-t border-white/10 p-3">

@@ -213,7 +213,9 @@ export async function POST(
   try {
     const scenario = await scenarioFrom(params);
     const { db, user } = await requireAccount();
-    const body = bodySchema.parse(await req.json().catch(() => null));
+    const parsed = bodySchema.safeParse(await req.json().catch(() => null));
+    if (!parsed.success) throw new HttpError(400, "That request is not valid.");
+    const body = parsed.data;
     const existing = await readSession(user.id, scenario);
 
     if (body.op === "start") {
