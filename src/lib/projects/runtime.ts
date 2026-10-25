@@ -8,7 +8,7 @@ import {
   type SimulationState,
 } from "@/lib/learning/simulation/engine";
 import type { SimulationOutcome } from "@/lib/learning/simulation/schema";
-import type { InterviewTurn, ProjectEvaluator } from "./evaluate";
+import type { Grader, InterviewTurn, ProjectEvaluator } from "./evaluate";
 import type {
   ChecklistItem,
   CodeVariant,
@@ -24,8 +24,9 @@ export const MAX_QUESTION = 500;
 export type ProjectMemo = {
   scenarioVersion: number;
   interview: { turns: InterviewTurn[]; revealed: string[]; vagueIndex: number };
-  requirements?: { text: string; covered: string[] };
-  brief?: { text: string; covered: string[]; variant: string };
+  // `grader` records who judged the writing: the keywords or a model, and why it fell back.
+  requirements?: { text: string; covered: string[]; grader?: Grader };
+  brief?: { text: string; covered: string[]; variant: string; grader?: Grader };
   reviews: {
     variant: string;
     reasonId?: string;
@@ -151,7 +152,7 @@ export async function askClient(
       turns: [
         ...memo.interview.turns,
         { role: "learner", text },
-        { role: "client", text: reply },
+        { role: "client", text: reply, grader: answer.grader },
       ],
       revealed: [...memo.interview.revealed, ...revealed],
       vagueIndex: memo.interview.vagueIndex + (revealed.length ? 0 : 1),
@@ -182,11 +183,9 @@ export async function submitRequirements(
   requireStage(state, "requirements", "The requirements are already written.");
   const text = cleanText(writing, MAX_WRITING, "requirements");
   const items = itemsFor(scenario.requirements, trackOf(state));
-  const covered = validIds(
-    await evaluator.checklist({ items, text }),
-    items.map((item) => item.id),
-  );
-  const memo: ProjectMemo = { ...memoOf(state), requirements: { text, covered } };
+  const result = await evaluator.checklist({ items, text });
+  const covered = validIds(result.covered, items.map((item) => item.id));
+  const memo: ProjectMemo = { ...memoOf(state), requirements: { text, covered, grader: result.grader } };
   const metricItem = scenario.requirements.find((item) => item.competency === "diligence");
   const action =
     metricItem && covered.includes(metricItem.id)
@@ -213,12 +212,10 @@ export async function submitBrief(
   const text = cleanText(writing, MAX_WRITING, "brief");
   const track = trackOf(state);
   const items = itemsFor(scenario.brief, track);
-  const covered = validIds(
-    await evaluator.checklist({ items, text }),
-    items.map((item) => item.id),
-  );
+  const result = await evaluator.checklist({ items, text });
+  const covered = validIds(result.covered, items.map((item) => item.id));
   const { variant, action } = pickVariant(scenario, covered);
-  const memo: ProjectMemo = { ...memoOf(state), brief: { text, covered, variant } };
+  const memo: ProjectMemo = { ...memoOf(state), brief: { text, covered, variant, grader: result.grader } };
   const first = system(scenario, withMemo(state, memo), action);
   const testItem = items.find((item) => item.competency === "diligence");
   const second = system(
@@ -492,7 +489,8 @@ export function projectView(
     inbox: scenario.inbox,
     interview: {
       opening: scenario.interview.opening,
-      turns: memo.interview.turns,
+      // Graders are kept for the teacher, not shown to the learner.
+      turns: memo.interview.turns.map(({ role, text }) => ({ role, text })),
       asked: memo.interview.turns.filter((turn) => turn.role === "learner").length,
       min: scenario.interview.minQuestions,
       max: scenario.interview.maxQuestions,
