@@ -259,10 +259,10 @@ export function Desktop({
         ) : (
           <span className="hidden truncate text-stone-700 sm:inline">{view.scenario.title}</span>
         )}
-        <span className="ml-auto tabular-nums text-stone-800">
+        <span className="ml-auto shrink-0 whitespace-nowrap tabular-nums text-stone-800">
           {view.status === "completed" ? "Job finished" : `Day ${day} of ${view.meters.effortMax}`}
         </span>
-        <span className="hidden tabular-nums text-stone-800 sm:inline">Trust {view.meters.trust}/10</span>
+        <span className="hidden shrink-0 whitespace-nowrap tabular-nums text-stone-800 sm:inline">Trust {view.meters.trust}/10</span>
       </header>
 
       <ProjectWidget view={view} onOpenApp={openApp} />
@@ -300,7 +300,9 @@ export function Desktop({
 
       {/* Dock */}
       <nav aria-label="Dock" className="absolute bottom-2 left-1/2 z-[940] max-w-[calc(100%-1rem)] -translate-x-1/2">
-        <ul className="flex items-end gap-2 overflow-x-auto rounded-[22px] border border-white/40 bg-white/30 px-2.5 pb-1.5 pt-2 shadow-2xl backdrop-blur-2xl">
+        {/* No overflow clipping here: bouncing icons, badges and tooltips rise above the bar.
+            Six compact icons fit a 320px screen with the smaller gap. */}
+        <ul className="flex items-end gap-1.5 rounded-[22px] border border-white/40 bg-white/30 px-2.5 pb-1.5 pt-2 shadow-2xl backdrop-blur-2xl sm:gap-2">
           {DOCK.map((app) => {
             const running = windows[app]?.open;
             const badge = app === "mail" ? unreadMail : app === attention ? 1 : 0;
