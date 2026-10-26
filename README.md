@@ -4,6 +4,8 @@
 
 DevPath is a learning platform built around immersive project simulations. The learner sits at a simulated macOS-style desktop and leads a small software project from first email to release: they interview a client, write requirements, brief an AI coding agent, review what it builds and decide how to ship. Every choice changes how the project ends, and each run finishes with a report on how the learner worked with AI, scored on the four AI Fluency competencies.
 
+**Live:** https://ai-learning-platform-sable.vercel.app. The home page has a 30-second product tour.
+
 COMP5241 group project, The Hong Kong Polytechnic University.
 
 ## How a project works
@@ -19,7 +21,25 @@ Every project runs on the same desktop with six apps. The client, the problem an
 | Review | Reviews a pull request (tech lead) or a walkthrough (product lead), and approves it or sends it back with a reason. |
 | Launch | Chooses how to release, then sees the outcome. |
 
-The run ends with a project report: the outcome (success, partly there or it went wrong) and four cards, one per AI Fluency competency (Delegation, Description, Discernment, Diligence), each built from evidence in what the learner actually did.
+Nothing opens by itself. At each step a "Next step" banner, a hint in the menu bar and a bouncing Dock icon point to the app to open. Mail arrives one message at a time, each with a banner, so nothing is missed. Sound cues mark new mail, replies, Cody's delivery and the ending; a speaker button in the menu bar mutes them. Unsent drafts survive minimising a window.
+
+Two meters run throughout: **days used** out of the two-week budget, and **client trust**. Trust starts at 5 and moves at the moments the client sees:
+
+| Moment | Trust |
+|---|---|
+| First move: book a call / send a quote | +1 / −1 |
+| A thorough call (5 of the 6 facts uncovered) | +1 |
+| A success measure agreed in the requirements | +1 |
+| Cody's work sent back for the wrong reason | −1 |
+| Release with the weekly count / switch everyone at once | +1 / −1 |
+| Outcome: success / it went wrong | +1 / −2 |
+
+A flawless run reaches 10/10.
+
+The run ends with a project report, which shows:
+- the outcome: success, partly there or it went wrong;
+- why the client's trust moved, line by line;
+- four cards, one per AI Fluency competency (Delegation, Description, Discernment, Diligence), each built from evidence in what the learner actually did.
 
 ## Design: a written story, with AI only where it counts
 
@@ -46,9 +66,11 @@ A run usually makes 4 to 6 requests (about half the interview questions, plus th
 | Area | State |
 |---|---|
 | Harbour Clinic booking board (two tracks, four code versions, several endings) | Done |
-| macOS-style desktop, public home page and projects page | Done |
+| macOS-style desktop with guided steps, one-by-one mail and sound cues | Done |
+| Public home page with the product tour, and the projects page | Done |
 | Saved runs, restart, sign-in with GitHub or a magic link | Done |
-| Evaluator for free text | Gemini, with a keyword fallback (see below) |
+| Evaluator for free text | Gemini, with a keyword fallback (see above) |
+| Client trust that a well-run project can raise to 10, explained in the report | Done |
 | Teacher view of class results (read-only) | Planned |
 
 ## Tech stack
@@ -57,6 +79,7 @@ A run usually makes 4 to 6 requests (about half the interview questions, plus th
 - Supabase: Auth (GitHub OAuth and magic link) and Postgres with row-level security
 - Google Gemini via `@google/genai`, server-side only (`src/lib/ai`)
 - zod for scenario and request validation
+- Web Audio for the desktop's sound cues, synthesised in the browser (no audio files)
 - Vercel for hosting
 
 ## Architecture
@@ -85,15 +108,17 @@ src/
     (sim)/projects/[id]/     the full-screen desktop for one project
     api/projects/[id]/       start a run and apply each move
   components/
-    home/                    light-band background, glass cards, scroll reveal
-    projects/desktop/        desktop shell, windows, Dock, overlays and the six apps
+    home/                    light-band background, glass cards, scroll reveal, tour link
+    projects/desktop/        desktop shell, windows, Dock, overlays, the six apps and sound cues
     NavBar.tsx
   lib/
     projects/                scenario types, scenarios, runtime and evaluator
     learning/simulation/     generic state machine and schema
     ai/                      Gemini client and hourly AI quota
     supabase/                browser and server clients, API error mapping
+    sound.ts                 synthesised sound cues and the mute setting
     auth-store.tsx           signed-in user for client components
+public/promo/                the product tour video (1080p and 720p) and its poster
 docs/scenarios/              scenario scripts
 supabase/migrations/         database schema
 tests/                       unit tests
@@ -126,13 +151,15 @@ The migrations also contain the tables of the earlier course platform. The app n
 
 ### Deploying
 
-Vercel deploys `main` automatically. Add the same environment variables under Project Settings → Environment Variables.
+Vercel deploys `main` automatically. Add the same environment variables under Project Settings → Environment Variables. Paste each key on a single line. The server ignores stray whitespace in the Supabase key, and error logs mask keys.
+
+Vercel's Hobby plan only deploys commits by members of the Vercel team, so merge pull requests with **Create a merge commit**. Its Vercel check fails on PRs from forks ("Authorization required"); that's expected and isn't a problem with the code.
 
 ## Adding a project
 
 1. Write the script in `docs/scenarios/`: facts, requirements, brief constraints, code versions and endings.
 2. Add a public listing to `src/lib/projects/catalog.ts`. The home page and `/projects` pick it up automatically.
-3. Add the scenario module under `src/lib/projects/` and register it in `src/lib/projects/index.ts`.
+3. Add the scenario module under `src/lib/projects/` and register it in `src/lib/projects/index.ts`. Its `trust` section gives the reason shown in the report for each action that changes trust, and the change for each outcome.
 4. Add tests in `tests/projects.test.ts` that reach each ending.
 
 ## Scripts
