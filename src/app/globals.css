@@ -27,6 +27,13 @@ html:has(.public-shell) {
   color-scheme: dark;
 }
 
+/* In-page links (Watch the 30s tour) glide to their section, unless the learner asked for less motion. */
+@media (prefers-reduced-motion: no-preference) {
+  html:has(.public-shell) {
+    scroll-behavior: smooth;
+  }
+}
+
 /* A Dock icon asking to be opened: two quick hops, then a rest, like macOS. */
 @keyframes dock-attention {
   0%, 36%, 100% { transform: translateY(0); }
