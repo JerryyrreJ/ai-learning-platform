@@ -356,7 +356,9 @@ export function Desktop({
                   onClick={() => openApp(app)}
                   aria-label={`${APPS[app].name}${badge ? `, ${badge} new` : ""}`}
                   className={`group flex flex-col items-center transition-transform duration-150 hover:-translate-y-2 motion-reduce:transition-none ${
-                    app === attention ? "animate-[dock-attention_3s_ease-in-out_infinite] motion-reduce:animate-none" : ""
+                    // The hover lift (translate) and the bounce (transform) would add up, so a
+                    // hovered icon stops bouncing and just lifts like the others.
+                    app === attention ? "animate-[dock-attention_3s_ease-in-out_infinite] hover:animate-none motion-reduce:animate-none" : ""
                   }`}
                 >
                   <span className="pointer-events-none absolute -top-8 hidden whitespace-nowrap rounded-md bg-stone-800/80 px-2 py-0.5 text-[12px] text-white group-hover:block">{APPS[app].name}</span>
