@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Reveal } from "@/components/home/Reveal";
 import { SpotlightCard } from "@/components/home/SpotlightCard";
+import { TourLink } from "@/components/home/TourLink";
 import { glass } from "@/components/home/glass";
 import { AppIcon, Avatar } from "@/components/projects/desktop/icons";
 import { APPS, DOCK, type AppId } from "@/components/projects/desktop/config";
@@ -55,9 +56,11 @@ const PRINCIPLES = [
   { title: "Consequences, not quizzes", text: "There are no right-answer buttons. What you miss or wave through shows up later, in the code, the release and the report." },
 ];
 
-const pill = "inline-flex items-center justify-center rounded-full px-7 py-3 text-[15px] font-medium transition duration-300";
+// A shared minimum width keeps the hero buttons the same size, whichever label is longer.
+const pill = "inline-flex min-w-52 items-center justify-center rounded-full px-7 py-3 text-[15px] font-medium transition duration-300";
 const primary = `${pill} bg-white text-black hover:bg-white/85`;
-const secondary = `${pill} border border-white/20 bg-transparent text-white/80 hover:scale-[1.02] hover:border-white/50 hover:bg-white/15 hover:text-white hover:shadow-[0_0_20px_rgba(255,255,255,0.3),0_0_40px_rgba(255,255,255,0.1)]`;
+// Frosted like the navbar, so it reads as glass over the light bands.
+const secondary = `${pill} border border-white/20 bg-white/[0.06] text-white/80 backdrop-blur-xl backdrop-saturate-150 hover:scale-[1.02] hover:border-white/50 hover:bg-white/15 hover:text-white hover:shadow-[0_0_20px_rgba(255,255,255,0.3),0_0_40px_rgba(255,255,255,0.1)]`;
 
 // Every section shares the navbar's width, so their edges line up on wide screens.
 const column = "mx-auto w-full max-w-4xl px-4 lg:px-0";
@@ -83,10 +86,31 @@ export default function Home() {
             <Link href="/projects" className={primary}>
               Browse projects
             </Link>
-            <Link href="#how" className={secondary}>
-              How it works
-            </Link>
+            <TourLink className={secondary}>Watch the 30s tour</TourLink>
           </div>
+        </Reveal>
+      </section>
+
+      {/* Product tour video. Click to play: the soundtrack is part of it, and nothing loads until then. */}
+      <section id="tour" className={`${column} scroll-mt-32 py-20`}>
+        <Reveal>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-violet-300/80">See it in action</p>
+          <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight sm:text-5xl">A workday in 30 seconds.</h2>
+          <p className="mt-4 max-w-2xl text-lg text-white/65">Follow one project from the client&apos;s first email to the final report.</p>
+        </Reveal>
+        <Reveal delay={150} className={`mt-12 ${glass} overflow-hidden p-2 shadow-2xl sm:p-3`}>
+          <video
+            id="tour-player"
+            controls
+            playsInline
+            preload="none"
+            poster="/promo/devpath-tour-poster.jpg"
+            className="aspect-video w-full rounded-2xl bg-black"
+            aria-label="DevPath product tour: one project on the simulated desktop, from the client's email to the project report"
+          >
+            <source src="/promo/devpath-tour-1080.mp4" type="video/mp4" media="(min-width: 1280px)" />
+            <source src="/promo/devpath-tour-720.mp4" type="video/mp4" />
+          </video>
         </Reveal>
       </section>
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth-store";
+import { play, readSoundSetting, unlockSound, writeSoundSetting } from "@/lib/sound";
 import type { ProjectView } from "@/lib/projects/runtime";
 import { APPS, DOCK, STAGE_APP, nextStep, type AppId, type Op } from "./config";
 import { AppIcon } from "./icons";
@@ -15,6 +16,7 @@ import { LaunchApp } from "./apps/LaunchApp";
 import { MailApp } from "./apps/MailApp";
 import { NotesApp } from "./apps/NotesApp";
 import { ReviewApp } from "./apps/ReviewApp";
+import { useDesktopSounds } from "./useDesktopSounds";
 
 type WindowState = { open: boolean; minimised: boolean; zoomed: boolean; z: number; frame: WindowFrame };
 
@@ -61,11 +63,30 @@ export function Desktop({
   const [attended, setAttended] = useState<string | null>(null);
   const [reportOpen, setReportOpen] = useState(false);
   const [compact, setCompact] = useState(false);
+  const [sound, setSound] = useState(true);
   const zTop = useRef(10);
   const noticeId = useRef(0);
   const lastStage = useRef<string | null>(null);
   const stageApp = useRef<AppId | null>(null);
   const lastDelivery = useRef(0);
+  const windowsNow = useRef(windows);
+
+  useEffect(() => {
+    windowsNow.current = windows;
+  }, [windows]);
+
+  // Browsers keep audio locked until the learner clicks or types once.
+  useEffect(() => {
+    setSound(readSoundSetting());
+    window.addEventListener("pointerdown", unlockSound);
+    window.addEventListener("keydown", unlockSound);
+    return () => {
+      window.removeEventListener("pointerdown", unlockSound);
+      window.removeEventListener("keydown", unlockSound);
+    };
+  }, []);
+
+  useDesktopSounds(view);
 
   useEffect(() => {
     const update = () => setCompact(window.innerWidth < 900);
@@ -77,6 +98,8 @@ export function Desktop({
   // At most one sticky banner (the next step) plus the three latest others.
   const notify = useCallback((notice: Omit<Notice, "id">) => {
     const id = ++noticeId.current;
+    // Mail gets the notification chime; a "Next step" banner waits for the action's own cue; only errors have no app.
+    play(notice.app === "mail" && !notice.sticky ? "mail" : notice.app ? "nudge" : "error", notice.sticky ? 0.4 : 0);
     setNotices((list) => {
       const sticky = list.filter((item) => item.sticky && !notice.sticky);
       const others = list.filter((item) => !item.sticky).slice(notice.sticky ? -3 : -2);
@@ -86,6 +109,8 @@ export function Desktop({
   }, []);
 
   const openApp = useCallback((app: AppId) => {
+    const current = windowsNow.current[app];
+    if (!current?.open || current.minimised) play("open");
     zTop.current += 1;
     const z = zTop.current;
     setWindows((all) => {
@@ -259,7 +284,23 @@ export function Desktop({
         ) : (
           <span className="hidden truncate text-stone-700 sm:inline">{view.scenario.title}</span>
         )}
-        <span className="ml-auto shrink-0 whitespace-nowrap tabular-nums text-stone-800">
+        <button
+          type="button"
+          onClick={() => {
+            writeSoundSetting(!sound);
+            setSound(!sound);
+          }}
+          aria-label={sound ? "Mute sounds" : "Turn sounds on"}
+          aria-pressed={!sound}
+          title={sound ? "Mute sounds" : "Turn sounds on"}
+          className="ml-auto grid h-6 w-6 shrink-0 place-items-center rounded text-stone-800 hover:bg-white/50"
+        >
+          <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="currentColor" />
+            {sound ? <path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" /> : <path d="M16 9.5l5 5M21 9.5l-5 5" />}
+          </svg>
+        </button>
+        <span className="shrink-0 whitespace-nowrap tabular-nums text-stone-800">
           {view.status === "completed" ? "Job finished" : `Day ${day} of ${view.meters.effortMax}`}
         </span>
         <span className="hidden shrink-0 whitespace-nowrap tabular-nums text-stone-800 sm:inline">Trust {view.meters.trust}/10</span>
