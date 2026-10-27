@@ -1,3 +1,6 @@
+import { interpretStoredCourse } from "./read";
+import { redactCourseSimulations } from "./simulation/public";
+
 export type StoredCourseRow = {
   id: string;
   owner_id: string;
@@ -20,10 +23,11 @@ export function courseForClient(
   accessibleList: boolean,
 ) {
   if (!accessibleList || row.owner_id === userId) return row;
+  const interpreted = interpretStoredCourse(row.document);
   return {
     id: row.id,
     status: row.status,
     visibility: row.visibility,
-    document: row.document,
+    document: interpreted.course ? redactCourseSimulations(interpreted.course) : row.document,
   };
 }

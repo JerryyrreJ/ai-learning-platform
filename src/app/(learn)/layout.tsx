@@ -1,4 +1,5 @@
 import { NavBar } from "@/components/NavBar";
+import { PublicSurface } from "@/components/home/PublicSurface";
 
 export default function LearnLayout({
   children,
@@ -8,7 +9,7 @@ export default function LearnLayout({
   return (
     <>
       <NavBar />
-      <main>{children}</main>
+      <main><PublicSurface>{children}</PublicSurface></main>
     </>
   );
 }

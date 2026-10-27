@@ -17,6 +17,7 @@ import {
   validateActivity,
 } from "@/lib/learning/registry";
 import type { LessonBlock } from "@/lib/types";
+import { evaluateProjectEvidence, projectAttemptId, readProjectEvidence } from "@/lib/learning/project-evidence";
 
 const requestSchema = z.object({
   courseId: z.string().trim().min(1).max(80),
@@ -176,7 +177,7 @@ export async function POST(req: Request) {
       throw new HttpError(400, "Unsupported or invalid activity.");
     }
     const block = parsed.data;
-    if (!body.response) throw new HttpError(400, "Enter a response first.");
+    if (!body.response && block.activityType !== "project") throw new HttpError(400, "Enter a response first.");
     const needsModel =
       block.activityType === "response" || block.activityType === "conversation";
     if (needsModel) {
@@ -195,22 +196,33 @@ export async function POST(req: Request) {
         response: attempt.response,
         feedback: attempt.feedback,
       }));
-    const evaluation = await evaluateActivity(block, {
+    let projectRunId: string | undefined;
+    let projectId: string | undefined;
+    const evaluation = block.activityType === "project"
+      ? await (async () => {
+          if (!account) account = await requireAccount();
+          const evidence = await readProjectEvidence(account.user.id, block);
+          const result = evaluateProjectEvidence(block, evidence);
+          projectRunId = evidence!.run_id;
+          projectId = projectAttemptId({ courseId: body.courseId, lessonId: body.lessonId, activityId: block.id }, account.user.id, projectRunId, block);
+          return result;
+        })()
+      : await evaluateActivity(block, {
       courseLanguage: found.course.language,
       lessonText: lessonAsText(found.lesson),
       objectives: found.lesson.objectives ?? found.course.objectives,
-      response: body.response,
+      response: body.response ?? "",
       previous: prior,
     });
     const attempt = {
-      id: crypto.randomUUID(),
+      id: projectId ?? crypto.randomUUID(),
       user_id: account?.user.id ?? "",
       course_id: body.courseId,
       lesson_id: body.lessonId,
       activity_id: block.id,
       course_revision: revision,
       activity_snapshot: block,
-      response: body.response,
+      response: projectRunId ? `Completed project run ${projectRunId}` : body.response,
       feedback: evaluation.feedback,
       score: evaluation.score,
     };
@@ -231,9 +243,10 @@ export async function POST(req: Request) {
           throw new HttpError(503, "Could not record course participation.");
         }
       }
-      const { error: saveError } = await writer
-        .from("learning_attempts")
-        .insert(attempt);
+      const table = writer.from("learning_attempts");
+      const { error: saveError } = projectId
+        ? await table.upsert(attempt, { onConflict: "id", ignoreDuplicates: true })
+        : await table.insert(attempt);
       if (saveError) {
         throw new HttpError(503, "Feedback could not be saved. Please retry.");
       }

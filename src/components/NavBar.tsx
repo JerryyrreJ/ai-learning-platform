@@ -48,6 +48,7 @@ export function NavBar() {
           <Link href="/#courses" className={navLink}>
             Courses
           </Link>
+          <Link href="/projects" className={navLink}>Project practice</Link>
           {user ? (
             <>
               <Link href="/my-courses" className={navLink}>

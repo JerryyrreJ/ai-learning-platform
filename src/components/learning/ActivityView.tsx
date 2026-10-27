@@ -1,5 +1,8 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { projectListings } from "@/lib/projects/catalog";
+import { projectHref } from "@/lib/learning/project-links";
 import { Markdown } from "@/components/Markdown";
 import { buttonPrimary } from "@/components/blocks/BlockCard";
 import { isDatabaseCourseId } from "@/lib/learning/ids";
@@ -454,6 +457,42 @@ function ConversationView(props: ViewProps & { block: Extract<LearningActivity, 
   );
 }
 
+function ImmersiveProjectView(props: ViewProps & { block: Extract<LearningActivity, { activityType: "project" }> }) {
+  const state = useAttempts(props);
+  const submit = useRef(state.submit);
+  useEffect(() => { submit.current = state.submit; }, [state.submit]);
+  const scenarioId = props.block.config.scenarioId;
+  useEffect(() => {
+    if (props.preview) return;
+    let active = true;
+    // Recover completion even when the learner left the desktop before syncing.
+    fetch(`/api/projects/${encodeURIComponent(scenarioId)}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => { if (active && data?.view?.completion) void submit.current("verify-project"); })
+      .catch(() => { /* A guest can still read the lesson and launch sign-in. */ });
+    return () => { active = false; };
+  }, [scenarioId, props.courseId, props.lessonId, props.block.id, props.preview]);
+  const project = projectListings.find((item) => item.id === scenarioId)!;
+  const href = projectHref(scenarioId, props.preview ? undefined : {
+    courseId: props.courseId, lessonId: props.lessonId, activityId: props.block.id,
+  });
+  return (
+    <section className="space-y-4 rounded-2xl border border-indigo-200 bg-indigo-50 p-5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700">Immersive project · {project.minutes} minutes</p>
+      <h2 className="text-xl font-semibold text-stone-900">{project.title}</h2>
+      <p className="text-sm text-stone-700">{project.summary}</p>
+      <p className="text-sm text-stone-600">Work in the full desktop, then return to this lesson. Your completed run and AI Fluency feedback count toward the course.</p>
+      {props.preview && <p className="text-sm text-amber-800">Preview opens your standalone practice session. It does not write the course gradebook.</p>}
+      <div className="flex flex-wrap gap-3">
+        <Link className={buttonPrimary} href={href}>{props.preview ? "Preview desktop" : "Open immersive project"}</Link>
+        {!props.preview && <button className="rounded border border-indigo-300 px-3 py-2 text-sm" disabled={state.busy} onClick={() => void state.submit("verify-project")}>{state.busy ? "Verifying…" : "Record completed run"}</button>}
+      </div>
+      {state.error && <p role="alert" className="text-sm text-red-700">{state.error}</p>}
+      <FeedbackPanel feedback={state.feedback} history={[]} preview={props.preview} savedNote={state.savedNote} />
+    </section>
+  );
+}
+
 const renderers: {
   [K in ActivityType]: (
     props: ViewProps & { block: Extract<LearningActivity, { activityType: K }> },
@@ -467,6 +506,7 @@ const renderers: {
   response: (props) => <ResponseView {...props} />,
   conversation: (props) => <ConversationView {...props} />,
   simulation: (props) => <SimulationView {...props} />,
+  project: (props) => <ImmersiveProjectView {...props} />,
 };
 
 export function ActivityView({

@@ -322,6 +322,9 @@ const evaluators: {
       "Use the simulation player: its actions are validated by the simulation engine.",
     );
   },
+  project: () => {
+    throw new HttpError(400, "Project completion must be verified from the server session.");
+  },
 };
 
 export async function evaluateActivity(

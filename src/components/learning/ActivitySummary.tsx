@@ -8,6 +8,8 @@ import {
 
 function lines(activity: LearningActivity): { label: string; value: string; markdown?: boolean }[] {
   switch (activity.activityType) {
+    case "project":
+      return [{ label: "Immersive project", value: activity.config.scenarioId }];
     case "reading":
       return [{ label: "Reading", value: activity.config.markdown, markdown: true }];
     case "choice":

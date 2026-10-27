@@ -6,6 +6,7 @@ import {
   type LearningActivity,
 } from "@/lib/learning/registry";
 import { SimulationEditor } from "@/components/learning/SimulationEditor";
+import { projectListings } from "@/lib/projects/catalog";
 
 function FieldEditor({
   activity,
@@ -270,6 +271,20 @@ const editors: {
   quiz: (props) => <QuizEditor {...props} />,
   "code-review": (props) => <CodeReviewEditor {...props} />,
   simulation: (props) => <SimulationEditor {...props} />,
+  project: ({ activity, onChange }) => (
+    <label className="block text-sm font-medium">
+      Immersive project
+      <select
+        aria-label="Immersive project"
+        className="mt-1 block w-full rounded border bg-white p-2"
+        value={activity.config.scenarioId}
+        onChange={(event) => onChange({ ...activity, config: { scenarioId: event.target.value } })}
+      >
+        {projectListings.map((project) => <option key={project.id} value={project.id}>{project.title}</option>)}
+      </select>
+      <span className="mt-2 block font-normal text-stone-500">Opens the full desktop. Students return to this lesson with verified completion and feedback.</span>
+    </label>
+  ),
 };
 
 /** Editors are registered per activity type. CourseStudio does not branch on the type. */

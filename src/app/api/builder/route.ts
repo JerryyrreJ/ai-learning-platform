@@ -11,6 +11,7 @@ import {
 } from "@/lib/learning/generation";
 import { missingKey } from "@/lib/ai/gemini";
 import { enforceQuota } from "@/lib/ai/quota";
+export const maxDuration = 120;
 export async function POST(req: Request) {
   try {
     const { db, user } = await requireAccount();

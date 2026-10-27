@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase/client";
+import { safeSignInReturn } from "@/lib/auth-redirect";
 
 export default function AuthCallbackPage() {
   const router = useRouter();
@@ -33,7 +34,7 @@ export default function AuthCallbackPage() {
         return;
       }
       // Full reload so the auth provider starts from the new session.
-      window.location.replace("/");
+      window.location.replace(safeSignInReturn(params.get("next")));
     });
   }, [router]);
 

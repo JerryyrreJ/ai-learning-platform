@@ -3,7 +3,7 @@ import { BACKGROUND_LABELS, type Background, type Course } from "@/lib/types";
 export function adaptStaticCourse(course: Course): Course {
   return {
     ...course,
-    domain: course.domain ?? "Software Engineering",
+    domain: course.domain ?? "General",
     targetAudience:
       course.targetAudience ??
       course.audience

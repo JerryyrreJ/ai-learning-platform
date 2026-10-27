@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Markdown } from "@/components/Markdown";
 import { buttonPrimary } from "@/components/blocks/BlockCard";
 import { isDatabaseCourseId } from "@/lib/learning/ids";
@@ -230,12 +230,16 @@ function CompletionPanel({
 }
 
 export function SimulationView({
-  block,
+  block: incomingBlock,
   courseId,
   lessonId,
   preview,
   onResult,
 }: Props) {
+  // Registry validation returns fresh objects. Reporting completion updates the
+  // learner provider; an equivalent config must not reset the finished run.
+  const blockKey = JSON.stringify(incomingBlock);
+  const block = useMemo(() => JSON.parse(blockKey) as PlayableSimulation, [blockKey]);
   const [mode, setMode] = useState<Mode>(preview ? "local" : "loading");
   const [view, setView] = useState<SimulationPublicView | null>(null);
   const [local, setLocal] = useState<{
@@ -498,7 +502,7 @@ export function SimulationView({
         Each decision changes the situation. There are {block.config.completion.maxSteps} steps at
         most.
         {mode === "local"
-          ? " This practice run stays in this browser tab and is not added to your progress."
+          ? " This practice run stays on this device and is not added to the instructor gradebook."
           : " Your progress is saved after every choice, so you can resume after a refresh."}
       </p>
       {preview && (

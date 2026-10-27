@@ -4,6 +4,7 @@ import { adaptStaticCourse } from "./legacy";
 import { interpretStoredCourse } from "./read";
 import type { CourseRecord } from "./model";
 import type { Course } from "@/lib/types";
+import { redactCourseSimulations } from "./simulation/public";
 
 export async function readCourse(id: string): Promise<Course | undefined> {
   const demo = staticCourse(id);
@@ -63,7 +64,7 @@ export async function listCourses(): Promise<Course[]> {
           interpreted.notes,
         );
       }
-      published.push(interpreted.course);
+      published.push(redactCourseSimulations(interpreted.course));
     } catch (error) {
       console.error("Skipping malformed course", error);
     }

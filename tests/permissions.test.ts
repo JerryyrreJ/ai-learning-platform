@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { PGlite } from "@electric-sql/pglite";
+import { newActivity } from "../src/lib/learning/registry";
 const teacher = "00000000-0000-4000-8000-000000000001",
   student = "00000000-0000-4000-8000-000000000002",
   outsider = "00000000-0000-4000-8000-000000000003",
@@ -48,6 +49,12 @@ test("database enforces role, ownership, enrolment, publication and evidence bou
       "utf8",
     ),
   );
+  const hiddenState = readFileSync("supabase/migrations/20261027103619_protect_simulation_hidden_state.sql", "utf8");
+  await db.exec(hiddenState);
+  await db.exec(hiddenState);
+  const registryTypes = readFileSync("supabase/migrations/20261027103817_restore_activity_registry_types.sql", "utf8");
+  await db.exec(registryTypes);
+  await db.exec(registryTypes);
   await db.exec(
     `insert into auth.users values ('${teacher}','teacher@example.test',now()),('${student}','student@example.test',now()),('${outsider}','outsider@example.test',now()),('${otherTeacher}','other@example.test',now()); update public.profiles set role='instructor' where id in ('${teacher}','${otherTeacher}');`,
   );
@@ -179,6 +186,16 @@ test("database enforces role, ownership, enrolment, publication and evidence bou
     `update public.courses set updated_at = now() where id = '${course}' returning id`,
   );
   assert.equal(touched[0].rows[0].id, course);
+  const restoredDocument = {
+    id: course,
+    lessons: [{ id: "restored-lesson", blocks: [newActivity("simulation"), newActivity("code-review"), newActivity("project")] }],
+  };
+  const documentSql = JSON.stringify(restoredDocument).replace(/'/g, "''");
+  const savedRestoration = await as(teacher, `update public.courses set document='${documentSql}'::jsonb where id='${course}' returning document`);
+  assert.equal((savedRestoration[0].rows[0].document as typeof restoredDocument).lessons[0].blocks.length, 3);
+  const unknownType = structuredClone(restoredDocument);
+  Object.assign(unknownType.lessons[0].blocks[0], { activityType: "execute-code" });
+  await assert.rejects(as(teacher, `update public.courses set document='${JSON.stringify(unknownType).replace(/'/g, "''")}'::jsonb where id='${course}'`), /check constraint/);
   const invited = await as(
     teacher,
     `insert into public.course_invitations(course_id,email) values('${course}','extra@example.test') returning email`,
@@ -297,21 +314,12 @@ test("database enforces role, ownership, enrolment, publication and evidence bou
   await db.exec(
     `insert into public.simulation_sessions(id,user_id,course_id,lesson_id,activity_id,activity_snapshot,state,version) values('20000000-0000-4000-8000-000000000001','${student}','${course}','l','a','{}','{"stageId":"start","step":0,"variables":{}}',1)`,
   );
-  assert.equal(
-    (await as(student, "select * from public.simulation_sessions"))[0].rows
-      .length,
-    1,
-  );
-  assert.equal(
-    (await as(outsider, "select * from public.simulation_sessions"))[0].rows
-      .length,
-    0,
-  );
-  assert.equal(
-    (await as(teacher, "select * from public.simulation_sessions"))[0].rows
-      .length,
-    0,
-  );
+  for (const caller of [student, outsider, teacher]) {
+    await assert.rejects(as(caller, "select * from public.simulation_sessions"), /permission/);
+  }
+  await db.exec("set role service_role");
+  assert.equal((await db.exec("select * from public.simulation_sessions"))[0].rows.length, 1);
+  await db.exec("reset role");
   await assert.rejects(
     as(
       student,

@@ -4,6 +4,7 @@ import { choice, codeReview, ordering, reading, response } from "./authoring";
 export const aiCodingAgents: Course = {
   id: "ai-coding-agents",
   title: "Building Software with AI Coding Agents",
+  domain: "Software Engineering",
   tagline: "Delegate, describe, discern and take responsibility",
   description:
     "AI agents can now write most of the code. This course is about everything else: deciding what to hand over, describing it clearly, and judging whether the output is any good. Uses Anthropic's AI Fluency 4D framework.",
@@ -175,6 +176,17 @@ function applyStudentDiscount(total, isStudent) {
           1,
           "A test at the boundary value checks behaviour directly. Asking the AI again can help, but it may confidently repeat the same mistake.",
         ),
+      ],
+    },
+    {
+      id: "clinic-project",
+      title: "Apply your skills: Harbour Clinic",
+      summary: "Interview a client, brief an AI teammate, review the result and reflect on your decisions.",
+      minutes: 20,
+      objectives: ["Clarify requirements before delegating", "Review AI output against evidence", "Explain release trade-offs"],
+      blocks: [
+        reading("clinic-introduction", "## Put the skills together\n\nIn this project you will interview a clinic manager, brief Cody, review its work and choose how to launch. Choose the product or engineering track. After launch, review your AI Fluency report and return here to complete the lesson."),
+        { type: "activity", id: "clinic-desktop", version: 1, activityType: "project", config: { scenarioId: "harbour-clinic" } },
       ],
     },
   ],

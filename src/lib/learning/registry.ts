@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { projectListings } from "@/lib/projects/catalog";
 import {
   initialSimulationConfig,
   simulationConfigSchema,
@@ -52,6 +53,9 @@ const conversationConfig = z.object({
 });
 
 const readingConfig = z.object({ markdown: text });
+const projectConfig = z.object({
+  scenarioId: z.string().trim().min(1).max(120),
+});
 
 const codeReviewConfig = z.object({
   context: text,
@@ -211,6 +215,16 @@ export const activityDefinitions = {
     envelope: envelope("simulation", simulationConfigSchema),
     initial: initialSimulationConfig,
   },
+  project: {
+    renderer: "project" as const,
+    editor: "project" as const,
+    evaluation: "project" as const,
+    label: "Immersive project",
+    description: `A full desktop experience with AI teammates. Choose an existing project: ${projectListings.map((item) => `${item.id} (${item.title})`).join(", ")}. Completion is verified from the server's project session.`,
+    schema: projectConfig,
+    envelope: envelope("project", projectConfig),
+    initial: { scenarioId: projectListings[0].id },
+  },
 };
 
 export type ActivityType = keyof typeof activityDefinitions;
@@ -255,6 +269,10 @@ export type LearningFeedback = z.infer<typeof feedbackSchema>;
 
 function structuralMessage(activity: LearningActivity): string | null {
   switch (activity.activityType) {
+    case "project":
+      return projectListings.some((item) => item.id === activity.config.scenarioId)
+        ? null
+        : "Choose an available immersive project.";
     case "choice":
       return activity.config.answer >= activity.config.options.length
         ? "Correct answer must refer to an existing option."
@@ -340,6 +358,7 @@ export function completionThreshold(activity: LearningActivity): number {
     case "code-review":
     case "response":
     case "simulation":
+    case "project":
       return 1;
     default: {
       const unreachable: never = activity;
@@ -351,6 +370,8 @@ export function completionThreshold(activity: LearningActivity): number {
 /** Tutor context without embedded answer keys. */
 export function activityForTutor(activity: LearningActivity): unknown {
   switch (activity.activityType) {
+    case "project":
+      return { type: "project", ...projectListings.find((item) => item.id === activity.config.scenarioId) };
     case "choice":
       return {
         type: "choice",

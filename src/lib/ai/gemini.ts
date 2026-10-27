@@ -267,7 +267,7 @@ export function streamText(params: { system: string; contents: Content[]; maxTok
 
 
 export async function generateJson<T extends z.ZodType>(params: { system: string; prompt: string; schema: T; maxTokens?: number }): Promise<z.infer<T> | null> {
-  const result = await generateJsonFromChain({ ...params, timeoutMs: 55_000 });
+  const result = await generateJsonFromChain({ ...params, maxTokens: params.maxTokens ?? 4096, timeoutMs: 55_000 });
   return result?.data ?? null;
 }
 

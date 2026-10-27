@@ -1,6 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { courseForClient } from "../src/lib/learning/course-view";
+import { exampleCourse } from "../src/lib/learning/examples";
+import { newActivity } from "../src/lib/learning/registry";
 
 const row = {
   id: "10000000-0000-4000-8000-000000000001",
@@ -37,4 +39,14 @@ test("the caller still receives owner fields for their own courses", () => {
   const studio = courseForClient(row, "someone-else", false);
   if (!("owner_id" in studio)) assert.fail("studio list dropped owner_id");
   assert.equal(studio.owner_id, row.owner_id);
+});
+
+test("accessible course API payloads hide simulation rules while the owner can edit them", () => {
+  const document = exampleCourse("english");
+  document.lessons[0].blocks.push(newActivity("simulation"));
+  const stored = { ...row, document };
+  const learner = courseForClient(stored, "learner", true);
+  assert.doesNotMatch(JSON.stringify(learner.document), /availableWhen|startStage|exhaustedSummary/);
+  assert.match(JSON.stringify(learner.document), /redacted/);
+  assert.match(JSON.stringify(courseForClient(stored, stored.owner_id, true).document), /startStage/);
 });
