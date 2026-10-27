@@ -8,6 +8,15 @@ DevPath is a learning platform built around immersive project simulations. The l
 
 COMP5241 group project, The Hong Kong Polytechnic University.
 
+## Two surfaces, one app
+
+The app now runs two products side by side:
+
+- **DevPath projects** — the project simulations above, at `/` and `/projects`, in the dark shell.
+- **Courses** — the earlier course platform, at `/courses`, `/dashboard`, `/my-courses` and `/onboarding`, in its original light shell. Learners take lessons with an AI tutor; teachers author courses and manage students under `/teach`.
+
+The two live in separate route groups (`(learn)` and `(classic)`) so their layouts and styles do not collide. Both share the same Supabase project, auth and `profiles` table. The old course tables in `supabase/migrations` are in use again; the new simulation tables sit alongside them.
+
 ## How a project works
 
 Every project runs on the same desktop with six apps. The client, the problem and the stakes change from project to project; the workflow stays the same.
@@ -71,7 +80,7 @@ A run usually makes 4 to 6 requests (about half the interview questions, plus th
 | Saved runs, restart, sign-in with GitHub or a magic link | Done |
 | Evaluator for free text | Gemini, with a keyword fallback (see above) |
 | Client trust that a well-run project can raise to 10, explained in the report | Done |
-| Teacher view of class results (read-only) | Planned |
+| Restored course platform: learner lessons, AI tutor, teacher workspace | Done |
 
 ## Tech stack
 
@@ -104,20 +113,27 @@ POST /api/projects/[id]   ─────▶   route.ts: check sign-in, load run
 ```
 src/
   app/
-    (learn)/                 public pages: home, /projects, sign-in, auth callback
+    (learn)/                 public DevPath pages: home, /projects, sign-in, auth callback
+    (classic)/               course platform: /courses, /dashboard, /my-courses, /onboarding
+    (teach)/teach/           teacher workspace: courses, curriculum, students, invitations
     (sim)/projects/[id]/     the full-screen desktop for one project
-    api/projects/[id]/       start a run and apply each move
+    api/                     projects, courses, enrolments, activities, builder, tutor, me
   components/
     home/                    light-band background, glass cards, scroll reveal, tour link
     projects/desktop/        desktop shell, windows, Dock, overlays, the six apps and sound cues
-    NavBar.tsx
+    classic/                 the course platform's original NavBar
+    learning/                course player, activity views, studio and preference components
+    teaching/                teacher workspace panels
+    NavBar.tsx               DevPath's dark floating nav
   lib/
     projects/                scenario types, scenarios, runtime and evaluator
-    learning/simulation/     generic state machine and schema
-    ai/                      Gemini client and hourly AI quota
+    learning/                course repository, generation and evaluation; simulation/ holds the project state machine
+    teaching/                course, student and invitation queries
+    ai/                      Gemini clients (gemini.ts for projects, gemini-legacy.ts for courses)
     supabase/                browser and server clients, API error mapping
     sound.ts                 synthesised sound cues and the mute setting
     auth-store.tsx           signed-in user for client components
+    learner-store.tsx        learner profile and course preferences
 public/promo/                the product tour video (1080p and 720p) and its poster
 docs/scenarios/              scenario scripts
 supabase/migrations/         database schema
@@ -149,7 +165,7 @@ Fill in `.env.local` before signing in:
 5. Paste `supabase/templates/magic_link.html` into Authentication → Email Templates → Magic Link. The link opens `/auth/confirm?token_hash=…` and verifies only when the learner presses the button, so an email scanner that previews the link cannot use up the one-time token.
 6. To enable GitHub sign-in, create a GitHub OAuth app with the callback URL Supabase shows under Authentication → Providers → GitHub, and paste its client ID and secret there.
 
-The migrations also contain the tables of the earlier course platform. The app no longer uses them; they are kept so existing data is not dropped.
+The migrations contain both the course platform tables and the simulation tables; run all of them, in filename order.
 
 ### Deploying
 
@@ -173,3 +189,4 @@ Vercel's Hobby plan only deploys commits by members of the Vercel team, so merge
 | `npm run typecheck` | TypeScript |
 | `npm run lint` | ESLint |
 | `npm run test:postgres` | Apply the migrations to a local Postgres and check the policies |
+| `npm run test:e2e` | Playwright end-to-end tests |

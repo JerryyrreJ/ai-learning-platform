@@ -27,6 +27,9 @@ export function NavBar() {
           <Link href="/projects" className={navLink}>
             Projects
           </Link>
+          <Link href="/courses" className={navLink}>
+            Courses
+          </Link>
           {user ? (
             <details className="relative">
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full px-1 py-0.5 hover:bg-white/10 [&::-webkit-details-marker]:hidden">
