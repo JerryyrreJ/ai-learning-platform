@@ -137,7 +137,7 @@
                   <tr>
                     <td align="center" bgcolor="#4f46e5" style="border-radius: 10px">
                       <a
-                        href="{{ .ConfirmationURL }}"
+                        href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=magiclink"
                         target="_blank"
                         rel="noopener"
                         style="
@@ -188,11 +188,11 @@
                   "
                 >
                   <a
-                    href="{{ .ConfirmationURL }}"
+                    href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=magiclink"
                     target="_blank"
                     rel="noopener"
                     style="color: #4f46e5; text-decoration: underline"
-                    >{{ .ConfirmationURL }}</a
+                    >{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&amp;type=magiclink</a
                   >
                 </p>
               </td>

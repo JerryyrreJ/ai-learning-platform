@@ -19,7 +19,11 @@ export default function AuthCallbackPage() {
     // The provider reports failures (e.g. the user cancelled) in the query string.
     const providerError = params.get("error_description") ?? params.get("error");
     if (providerError) {
-      setError(providerError);
+      setError(
+        params.get("error_code") === "otp_expired"
+          ? "This sign-in link has already been used or has expired. Request a new link and try again."
+          : providerError,
+      );
       return;
     }
     // The browser client exchanges the ?code= itself while it initialises, and
@@ -43,7 +47,7 @@ export default function AuthCallbackPage() {
         <>
           <p className="text-rose-300">Sign-in failed: {error}</p>
           <Link href="/login" className="mt-4 inline-block font-medium text-cyan-300 underline">
-            Back to sign in
+            Request a new link
           </Link>
         </>
       ) : (

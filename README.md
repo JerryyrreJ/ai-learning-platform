@@ -144,8 +144,10 @@ Fill in `.env.local` before signing in:
 
 1. Create a project at supabase.com.
 2. Run every file in `supabase/migrations` in filename order in the SQL editor.
-3. Under Authentication → URL Configuration, add `http://localhost:3000/auth/callback` and each deployed origin plus `/auth/callback` to the redirect allow list.
-4. To enable GitHub sign-in, create a GitHub OAuth app with the callback URL Supabase shows under Authentication → Providers → GitHub, and paste its client ID and secret there.
+3. Set the project's **Site URL** to the origin learners use (`http://localhost:3000` locally, the deployed origin in production). Magic-link emails are built from `{{ .SiteURL }}`.
+4. Under Authentication → URL Configuration, add `http://localhost:3000/auth/callback` and each deployed origin plus `/auth/callback` to the redirect allow list for GitHub sign-in.
+5. Paste `supabase/templates/magic_link.html` into Authentication → Email Templates → Magic Link. The link opens `/auth/confirm?token_hash=…` and verifies only when the learner presses the button, so an email scanner that previews the link cannot use up the one-time token.
+6. To enable GitHub sign-in, create a GitHub OAuth app with the callback URL Supabase shows under Authentication → Providers → GitHub, and paste its client ID and secret there.
 
 The migrations also contain the tables of the earlier course platform. The app no longer uses them; they are kept so existing data is not dropped.
 
