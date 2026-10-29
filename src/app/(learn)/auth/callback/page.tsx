@@ -17,24 +17,35 @@ export default function AuthCallbackPage() {
       router.replace("/");
       return;
     }
-    // The provider reports failures (e.g. the user cancelled) in the query string.
     const providerError = params.get("error_description") ?? params.get("error");
     if (providerError) {
       setError(providerError);
       return;
     }
-    // The browser client exchanges the ?code= itself while it initialises, and
-    // getSession() waits for that. Exchanging the code again here would fail
-    // because the PKCE verifier has already been used.
-    supabase.auth.getSession().then(({ data }) => {
+    const next = safeSignInReturn(params.get("next"));
+
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!data.session) {
         setError(
           "This sign-in link has expired or was opened in a different browser. Please sign in again.",
         );
         return;
       }
-      // Full reload so the auth provider starts from the new session.
-      window.location.replace(safeSignInReturn(params.get("next")));
+
+      let destination = next;
+      try {
+        const accountRes = await fetch("/api/me");
+        if (accountRes.ok) {
+          const account = await accountRes.json();
+          if (!account.onboardingCompleted) {
+            destination = `/onboarding?next=${encodeURIComponent(next)}`;
+          }
+        }
+      } catch {
+        // Fall through to the original destination if account lookup fails.
+      }
+
+      window.location.replace(destination);
     });
   }, [router]);
 

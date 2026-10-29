@@ -19,20 +19,22 @@ function AccessMessage({ status }: { status: number }) {
         <p className="mt-2 text-sm leading-6 text-stone-600">
           {unavailable
             ? "Course accounts are not configured on this deployment yet. Add the Supabase environment variables and try again."
-            : "Your account is signed in, but an administrator must assign the instructor role before you can open the teaching workspace."}
+            : "Your account is signed in. Activate Teaching Studio on this same account to create and publish courses — administrator privileges are never granted here."}
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-3">
+          {!unavailable && (
+            <Link
+              href="/onboarding?intent=teach"
+              className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+            >
+              Start Teaching
+            </Link>
+          )}
           <Link
-            href="/"
-            className="inline-flex items-center justify-center rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
-          >
-            Back to learning
-          </Link>
-          <Link
-            href="/my-courses"
+            href="/dashboard"
             className="inline-flex items-center justify-center rounded-lg border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-stone-50"
           >
-            My private courses
+            Back to My Learning
           </Link>
         </div>
       </div>

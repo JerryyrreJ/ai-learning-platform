@@ -55,6 +55,12 @@ test("database enforces role, ownership, enrolment, publication and evidence bou
   const registryTypes = readFileSync("supabase/migrations/20261027103817_restore_activity_registry_types.sql", "utf8");
   await db.exec(registryTypes);
   await db.exec(registryTypes);
+  const onboarding = readFileSync(
+    "supabase/migrations/20261029120000_onboarding_and_instructor_activation.sql",
+    "utf8",
+  );
+  await db.exec(onboarding);
+  await db.exec(onboarding);
   await db.exec(
     `insert into auth.users values ('${teacher}','teacher@example.test',now()),('${student}','student@example.test',now()),('${outsider}','outsider@example.test',now()),('${otherTeacher}','other@example.test',now()); update public.profiles set role='instructor' where id in ('${teacher}','${otherTeacher}');`,
   );
@@ -363,5 +369,41 @@ test("database enforces role, ownership, enrolment, publication and evidence bou
     1,
   );
   await db.exec("reset role");
+
+  const unverified = "00000000-0000-4000-8000-000000000005";
+  await db.exec(
+    `insert into auth.users values ('${unverified}','unverified@example.test',null)`,
+  );
+
+  await assert.rejects(
+    as(unverified, "select public.activate_instructor()"),
+    /Confirm your email first/i,
+  );
+  await assert.rejects(
+    as(
+      outsider,
+      `update public.profiles set role='instructor' where id='${outsider}'`,
+    ),
+    /Only an administrator may assign roles|permission|role/i,
+  );
+  await assert.rejects(
+    as(outsider, `update public.profiles set role='admin' where id='${outsider}'`),
+    /Only an administrator may assign roles|permission|role/i,
+  );
+
+  const activated = await as(outsider, "select public.activate_instructor() as role");
+  assert.equal(activated[0].rows[0].role, "instructor");
+  const again = await as(outsider, "select public.activate_instructor() as role");
+  assert.equal(again[0].rows[0].role, "instructor");
+  assert.equal(
+    (
+      await as(
+        outsider,
+        `select role from public.profiles where id='${outsider}'`,
+      )
+    )[0].rows[0].role,
+    "instructor",
+  );
+
   await db.close();
 });
