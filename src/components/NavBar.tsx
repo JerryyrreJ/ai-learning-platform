@@ -44,6 +44,9 @@ function defaultTone(pathname: string): NavTone {
   if (
     pathname === "/" ||
     pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/account" ||
     pathname === "/projects" ||
     pathname.startsWith("/auth/")
   ) {
@@ -53,7 +56,10 @@ function defaultTone(pathname: string): NavTone {
 }
 
 function loginHref(pathname: string) {
-  if (pathname === "/login" || pathname.startsWith("/auth/")) return "/login";
+  if (pathname === "/login" ||
+    pathname === "/signup" ||
+    pathname === "/forgot-password" ||
+    pathname === "/account" || pathname.startsWith("/auth/")) return "/login";
   return `/login?next=${encodeURIComponent(pathname)}`;
 }
 
@@ -119,6 +125,7 @@ export function NavBar({ tone }: { tone?: NavTone }) {
               )}
               <details className="relative">
                 <summary
+                  aria-label="Account menu"
                   className={`flex cursor-pointer list-none items-center gap-2 rounded-full px-1 py-0.5 ${t.summary} [&::-webkit-details-marker]:hidden`}
                 >
                   <span className={t.avatar}>{initial}</span>
@@ -143,6 +150,7 @@ export function NavBar({ tone }: { tone?: NavTone }) {
                       Start Teaching
                     </Link>
                   )}
+                  <Link href="/account" className={t.menuLink}>Account Settings</Link>
                   <Link href="/onboarding" className={t.menuLink}>
                     Profile & preferences
                   </Link>

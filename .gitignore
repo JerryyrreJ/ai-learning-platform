@@ -45,3 +45,6 @@ next-env.d.ts
 supabase/.temp/
 playwright-report/
 test-results/
+
+# Isolated authentication E2E build
+/.next-auth-e2e/

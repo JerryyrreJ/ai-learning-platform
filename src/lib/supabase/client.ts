@@ -11,6 +11,6 @@ let client: SupabaseClient | null = null;
 /** Browser Supabase client, or null when the env vars are not set (local demo mode). */
 export function getSupabase(): SupabaseClient | null {
   if (!isSupabaseConfigured) return null;
-  if (!client) client = createBrowserClient(url!, anonKey!);
+  if (!client) client = createBrowserClient(url!, anonKey!, { auth: { experimental: { passkey: true } } });
   return client;
 }

@@ -64,9 +64,9 @@ test("Studio saves both simulation types and previews the immersive desktop with
 
 test("teacher and learner navigation stays separate from standalone project practice", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Courses", exact: true })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Project practice", exact: true })).toHaveAttribute("href", "/projects");
+  await expect(page.getByRole("heading", { name: "Learn anything. By doing.", exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open Harbour Clinic", exact: true })).toHaveAttribute("href", "/login?next=%2Fprojects%2Fharbour-clinic");
   await page.goto("/teach");
   await expect(page.getByRole("heading", { name: /Sign in|Teaching workspace unavailable/ })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Back to learning", exact: true })).toHaveAttribute("href", "/");
+  await expect(page.getByRole("link", { name: "Back to My Learning", exact: true })).toHaveAttribute("href", "/dashboard");
 });

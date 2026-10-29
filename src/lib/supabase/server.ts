@@ -1,5 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
+import { HttpError } from "@/lib/http-error";
+export { HttpError } from "@/lib/http-error";
+import { assertMfa } from "@/lib/auth/security";
 import { cookies } from "next/headers";
 
 export async function serverDb() {
@@ -8,6 +11,7 @@ export async function serverDb() {
   if (!url || !key) return null;
   const store = await cookies();
   return createServerClient(url, key, {
+    auth: { experimental: { passkey: true } },
     cookies: {
       getAll: () => store.getAll(),
       setAll(values) {
@@ -31,6 +35,7 @@ export async function requireAccount(teacher = false) {
     );
   const { data, error } = await db.auth.getUser();
   if (error || !data.user) throw new HttpError(401, "Sign in to continue.");
+  await assertMfa(db, data.user);
   const { data: profile, error: profileError } = await db
     .from("profiles")
     .select("role")
@@ -69,14 +74,6 @@ export function recordDb() {
   return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL, key, {
     auth: { persistSession: false, autoRefreshToken: false },
   });
-}
-export class HttpError extends Error {
-  constructor(
-    public status: number,
-    message: string,
-  ) {
-    super(message);
-  }
 }
 const GENERIC_FAILURE = "Request failed.";
 

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const tokenHash = String(form.get("token_hash") ?? "");
   const requestedType = String(form.get("type") ?? "magiclink");
-  const next = safeNextPath(form.get("next"), "/");
+  const next = requestedType === "recovery" ? "/auth/reset-password" : safeNextPath(form.get("next"), "/");
 
   const redirect = (path: string) =>
     NextResponse.redirect(new URL(path, origin), 303);

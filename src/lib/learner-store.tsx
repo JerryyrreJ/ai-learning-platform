@@ -29,6 +29,7 @@ interface LearnerState {
   user: User | null;
   profile: LearnerProfile | null;
   saveProfile: (profile: LearnerProfile) => Promise<void>;
+  refreshProfile: () => Promise<void>;
   coursePreferences: Record<string, CoursePreference>;
   saveCoursePreference: (
     courseId: string,
@@ -217,6 +218,18 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
     };
   }, [replaceProgress, storeProgress]);
 
+  const refreshProfile = useCallback(async () => {
+    const current = activeSession.current;
+    const db = getSupabase();
+    if (!db || !current?.userId) return;
+    const { data, error } = await db.from("profiles").select("*").eq("id", current.userId).single();
+    if (error) throw error;
+    if (activeSession.current !== current) return;
+    const next = profileFromRow(data);
+    setProfile(next);
+    writeLocal(profileKey(current.userId), next);
+  }, []);
+
   const saveProfile = useCallback(async (next: LearnerProfile) => {
     if (!session || activeSession.current !== session) return;
     const normalized = normalizeProfile(next);
@@ -364,8 +377,8 @@ export function LearnerProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const value = useMemo<LearnerState>(
-    () => ({ ready, user, profile, saveProfile, coursePreferences, saveCoursePreference, progress, recordBlock, completeLesson, noteServerLessonComplete, logEvent, signOut }),
-    [ready, user, profile, saveProfile, coursePreferences, saveCoursePreference, progress, recordBlock, completeLesson, noteServerLessonComplete, logEvent, signOut],
+    () => ({ ready, user, profile, saveProfile, refreshProfile, coursePreferences, saveCoursePreference, progress, recordBlock, completeLesson, noteServerLessonComplete, logEvent, signOut }),
+    [ready, user, profile, saveProfile, refreshProfile, coursePreferences, saveCoursePreference, progress, recordBlock, completeLesson, noteServerLessonComplete, logEvent, signOut],
   );
 
   return (

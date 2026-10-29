@@ -180,7 +180,7 @@ test("public demonstration courses retain their lesson pages", async ({
   await page.goto("/");
   await expect(
     page.getByRole("heading", {
-      name: "Learn by exploring, practising and improving.",
+      name: "Learn anything. By doing.",
     }),
   ).toBeVisible();
   const courseLink = page.locator('a[href^="/courses/"]').first();
@@ -266,63 +266,25 @@ test("legacy studio links enter the guarded teaching workspace", async ({
   ).toBeVisible();
 });
 
-test("onboarding saves learning preferences and loads them again", async ({
-  page,
-}) => {
-  await page.goto("/onboarding");
-  await expect(
-    page.getByRole("heading", { name: "Make learning yours." }),
-  ).toBeVisible();
-  await page.getByLabel(/Display name/).fill("Mei");
-  await page.getByText("简体中文", { exact: true }).click();
-  await page
-    .getByText("Practise and apply what I learn", { exact: true })
-    .click();
-  await page.getByText("Step-by-step guidance", { exact: true }).click();
-  await page.getByRole("button", { name: "Save preferences" }).click();
-  await expect(page.getByRole("status")).toContainText("Preferences saved.");
-  await expect(
-    page.getByRole("link", { name: "Skip for now" }),
-  ).toBeVisible();
-
-  await page.reload();
-  await expect(page.getByLabel(/Display name/)).toHaveValue("Mei");
-  await expect(page.getByRole("radio", { name: "简体中文" })).toBeChecked();
-  await expect(
-    page.getByRole("radio", { name: "Step-by-step guidance" }),
-  ).toBeChecked();
+// The base branch now requires authentication before workspace onboarding.
+// Authenticated preference saves are covered by tests/auth-e2e/account.spec.ts.
+test("guest onboarding requires sign-in and keeps teaching intention", async ({ page }) => {
+  await page.goto("/onboarding?intent=teach");
+  await expect(page.getByRole("heading", { name: "How do you want to use DevPath?" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Sign in to continue" })).toHaveAttribute("href", "/login?next=%2Fonboarding%3Fintent%3Dteach");
+  await expect(page.getByLabel(/Display name/)).not.toBeVisible();
 });
 
-test("legacy onboarding data is preserved and mapped to new preferences", async ({
-  page,
-}) => {
+test("guest onboarding retains legacy preferences until sign-in", async ({ page }) => {
   await page.addInitScript(() => {
-    window.localStorage.setItem(
-      "learner-profile",
-      JSON.stringify({
-        displayName: "Old learner",
-        background: "cs_graduate",
-        experience: "comfortable",
-        goal: "career",
-        language: "zh",
-      }),
-    );
+    window.localStorage.setItem("learner-profile", JSON.stringify({
+      displayName: "Old learner", background: "cs_graduate", experience: "comfortable", goal: "career", language: "zh",
+    }));
   });
   await page.goto("/onboarding");
-  await expect(page.getByLabel(/Display name/)).toHaveValue("Old learner");
-  await expect(page.getByRole("radio", { name: "繁體中文" })).toBeChecked();
-  await expect(
-    page.getByRole("radio", { name: "Build practical or professional skills" }),
-  ).toBeChecked();
-  await page.getByRole("button", { name: "Save preferences" }).click();
-  await expect(page.getByRole("status")).toContainText("Preferences saved.");
-  const stored = await page.evaluate(() =>
-    JSON.parse(window.localStorage.getItem("learner-profile") ?? "{}"),
-  );
-  expect(stored.background).toBe("cs_graduate");
-  expect(stored.experience).toBe("comfortable");
-  expect(stored.learningStyle).toBe("balanced");
-  expect(stored.language).toBe("zh-Hant");
+  await expect(page.getByRole("link", { name: "Sign in to continue" })).toBeVisible();
+  const stored = await page.evaluate(() => JSON.parse(window.localStorage.getItem("learner-profile") ?? "{}"));
+  expect(stored).toMatchObject({ displayName: "Old learner", background: "cs_graduate", experience: "comfortable", goal: "career", language: "zh" });
 });
 
 test("course-level preferences stay scoped to one course", async ({ page }) => {

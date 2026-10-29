@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { getSupabase } from "@/lib/supabase/client";
+import { finishSignIn } from "@/lib/auth/browser";
 import { safeSignInReturn } from "@/lib/auth-redirect";
 
 export default function AuthCallbackPage() {
@@ -32,20 +33,11 @@ export default function AuthCallbackPage() {
         return;
       }
 
-      let destination = next;
       try {
-        const accountRes = await fetch("/api/me");
-        if (accountRes.ok) {
-          const account = await accountRes.json();
-          if (!account.onboardingCompleted) {
-            destination = `/onboarding?next=${encodeURIComponent(next)}`;
-          }
-        }
-      } catch {
-        // Fall through to the original destination if account lookup fails.
+        await finishSignIn(next);
+      } catch (error) {
+        setError(error instanceof Error ? error.message : "Could not finish signing in. Please retry.");
       }
-
-      window.location.replace(destination);
     });
   }, [router]);
 

@@ -22,6 +22,9 @@ See also [docs/UNIFIED_LEARNING_EXPERIENCE.md](docs/UNIFIED_LEARNING_EXPERIENCE.
 | `/courses/[courseId]/[lessonId]` | Reading, activities, feedback and progress |
 | `/dashboard` | My Learning — continue, progress and feedback |
 | `/my-courses` | My Creations — private AI learning paths |
+| `/login`, `/signup`, `/forgot-password` | Password login, signup and recovery; GitHub and Passkey shortcuts |
+| `/auth/setup`, `/auth/mfa` | Credential setup and TOTP challenge before workspace onboarding |
+| `/account` | Profile, email, password, Passkeys and TOTP management |
 | `/onboarding` | Learn/teach intention, then preferences |
 | `/teach` | Teaching Studio |
 | `/teach/courses/[courseId]` | Overview, curriculum, preview, students and settings |
@@ -79,7 +82,7 @@ npm run dev
 Without credentials, static courses, local simulations and preferences work.
 For persistent authoring and project runs, configure an **isolated test**
 Supabase instance and apply all migrations in filename order (including
-`20261029120000_onboarding_and_instructor_activation.sql`).
+`20261029120001_auth_account_management.sql`).
 
 | Variable | Purpose |
 | --- | --- |
@@ -88,7 +91,11 @@ Supabase instance and apply all migrations in filename order (including
 | `GEMINI_API_KEY` | Server-only AI authoring, tutoring and feedback |
 | `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | Primary and fallback model IDs |
 
-Enable GitHub OAuth and/or magic links in the test instance. Allow the local
+Enable password/email signup, email confirmation, GitHub OAuth, native Passkeys
+and TOTP in the test instance. Magic Link remains a recovery/compatibility flow.
+Follow [the account configuration and acceptance guide](docs/AUTH_ACCOUNT_MANAGEMENT.md)
+for RP ID/origins, secure email/password changes and the Auth API policy boundary.
+Allow the local
 `http://localhost:3000/auth/callback` redirect, including its `next` query
 parameter, in your Auth configuration. For magic-link confirm flows also allow
 `/auth/confirm`. Verified users can self-activate instructor access through
@@ -105,6 +112,7 @@ npm test
 npm run build
 npx playwright install chromium
 npm run test:e2e
+npm run test:auth-e2e
 ```
 
 `npm test` executes the actual migrations and role policies in an isolated
