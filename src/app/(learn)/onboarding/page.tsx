@@ -22,6 +22,7 @@ type AccountInfo = {
   onboardingCompleted: boolean;
   intendedWorkspace: Intention | null;
   emailVerified: boolean;
+  needsInstructorActivation?: boolean;
 };
 
 function OnboardingInner() {
@@ -67,6 +68,11 @@ function OnboardingInner() {
         setAccount(data);
         if (data.intendedWorkspace && !forceTeach) {
           setIntention(data.intendedWorkspace);
+        }
+        // Stuck teach intention without instructor role → recovery activation UI.
+        if (data.needsInstructorActivation && !forceTeach) {
+          window.location.replace("/onboarding?intent=teach");
+          return;
         }
         // Returning users land on preferences unless they explicitly start teaching.
         if (data.onboardingCompleted && !forceTeach) {

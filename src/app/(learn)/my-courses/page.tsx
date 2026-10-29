@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { CourseStudio } from "@/components/learning/CourseStudio";
+import { LearningPathWizard } from "@/components/learning/LearningPathWizard";
 
 /**
  * Personal learning paths and private drafts. Instructors use Teaching Studio
@@ -13,11 +14,12 @@ export default function MyCreationsPage() {
           <div>
             <p className="text-sm font-semibold text-indigo-600">My Creations</p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl">
-              Create a learning path with AI
+              Personal learning paths
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-stone-600">
-              Enter a topic, review the outline, then generate lessons and activities.
-              Personal paths stay private unless you publish through Teaching Studio.
+              Start with a simple AI wizard, then use Course Studio if you want to edit
+              lessons by hand. Paths stay private unless you publish through Teaching
+              Studio.
             </p>
           </div>
           <Link
@@ -26,6 +28,15 @@ export default function MyCreationsPage() {
           >
             Back to My Learning
           </Link>
+        </div>
+      </div>
+      <div className="mx-auto max-w-6xl space-y-8 px-4 py-8">
+        <LearningPathWizard />
+        <div>
+          <h2 className="text-lg font-semibold text-stone-900">Course Studio</h2>
+          <p className="mt-1 text-sm text-stone-600">
+            Advanced editing, invitations and full activity authoring.
+          </p>
         </div>
       </div>
       <CourseStudio />

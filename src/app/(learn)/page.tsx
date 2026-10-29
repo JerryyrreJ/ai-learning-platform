@@ -88,7 +88,7 @@ export default async function Home() {
         </Reveal>
         <Reveal delay={240}>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
-            <Link href={authAware("/courses", signedIn)} className={primary}>
+            <Link href="/courses" className={primary}>
               Explore Courses
             </Link>
             <Link href={authAware("/my-courses", signedIn)} className={secondary}>
@@ -136,7 +136,7 @@ export default async function Home() {
           ))}
         </div>
         <Reveal delay={180} className="mt-8 text-center">
-          <Link href={authAware("/courses", signedIn)} className={secondary}>
+          <Link href="/courses" className={secondary}>
             Browse all courses
           </Link>
         </Reveal>
@@ -226,7 +226,7 @@ export default async function Home() {
             Explore published courses or generate a personal path with AI.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Link href={authAware("/courses", signedIn)} className={primary}>
+            <Link href="/courses" className={primary}>
               Explore Courses
             </Link>
             <Link href={authAware("/my-courses", signedIn)} className={secondary}>

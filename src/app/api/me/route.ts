@@ -8,6 +8,8 @@ export type AccountPayload = {
   isTeacher: boolean;
   onboardingCompleted: boolean;
   intendedWorkspace: "learn" | "teach" | null;
+  /** Teach was intended but instructor activation has not succeeded yet. */
+  needsInstructorActivation: boolean;
 };
 
 async function loadAccount() {
@@ -32,6 +34,7 @@ async function loadAccount() {
     isTeacher,
     onboardingCompleted: !!profile.onboarding_completed_at,
     intendedWorkspace: intended,
+    needsInstructorActivation: intended === "teach" && !isTeacher,
   };
   return payload;
 }
@@ -44,7 +47,11 @@ export async function GET() {
   }
 }
 
-/** Complete first-time intention onboarding without changing roles by itself. */
+/**
+ * Complete first-time workspace intention.
+ * Teach activation must succeed before onboarding is marked complete, so a
+ * failed activate_instructor() call cannot leave a half-finished profile.
+ */
 export async function POST(request: Request) {
   try {
     const body = (await request.json().catch(() => null)) as {
@@ -60,17 +67,20 @@ export async function POST(request: Request) {
     const displayName =
       typeof body?.displayName === "string" ? body.displayName.trim().slice(0, 40) : "";
 
-    const updates: Record<string, unknown> = {
-      intended_workspace: intention,
-      onboarding_completed_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    };
-    if (displayName) updates.display_name = displayName;
-
-    const { error } = await db.from("profiles").update(updates).eq("id", user.id);
-    if (error) throw error;
+    if (displayName) {
+      const { error: nameError } = await db
+        .from("profiles")
+        .update({
+          display_name: displayName,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", user.id);
+      if (nameError) throw nameError;
+    }
 
     if (intention === "teach") {
+      // activate_instructor() sets role, intended_workspace and
+      // onboarding_completed_at in one SECURITY DEFINER update on success.
       const { error: activateError } = await db.rpc("activate_instructor");
       if (activateError) {
         const message = activateError.message ?? "";
@@ -79,7 +89,18 @@ export async function POST(request: Request) {
         }
         throw activateError;
       }
+      return Response.json(await loadAccount());
     }
+
+    const { error } = await db
+      .from("profiles")
+      .update({
+        intended_workspace: "learn",
+        onboarding_completed_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", user.id);
+    if (error) throw error;
 
     return Response.json(await loadAccount());
   } catch (e) {

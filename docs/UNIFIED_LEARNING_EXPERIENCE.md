@@ -33,3 +33,9 @@ Apply:
 `supabase/migrations/20261029120000_onboarding_and_instructor_activation.sql`
 
 Existing profiles are backfilled so returning users are not forced through intention choice again.
+
+## Auth notes
+
+- Choosing **teach** only marks onboarding complete inside `activate_instructor()` after a successful role grant. A failed activation (for example unverified email) does not leave `onboarding_completed_at` set.
+- Magic-link confirm verifies OTP then redirects through `/auth/callback` so first-time onboarding is checked the same way as OAuth.
+- Deploy `supabase/templates/magic_link.html` in the Supabase Auth email settings so links open `/auth/confirm` with `token_hash` instead of consuming the token on open.

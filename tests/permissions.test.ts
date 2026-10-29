@@ -391,19 +391,29 @@ test("database enforces role, ownership, enrolment, publication and evidence bou
     /Only an administrator may assign roles|permission|role/i,
   );
 
+  assert.equal(
+    (
+      await as(
+        unverified,
+        `select onboarding_completed_at is null as open from public.profiles where id='${unverified}'`,
+      )
+    )[0].rows[0].open,
+    true,
+  );
+
   const activated = await as(outsider, "select public.activate_instructor() as role");
   assert.equal(activated[0].rows[0].role, "instructor");
   const again = await as(outsider, "select public.activate_instructor() as role");
   assert.equal(again[0].rows[0].role, "instructor");
-  assert.equal(
-    (
-      await as(
-        outsider,
-        `select role from public.profiles where id='${outsider}'`,
-      )
-    )[0].rows[0].role,
-    "instructor",
-  );
+  const outsiderProfile = (
+    await as(
+      outsider,
+      `select role, intended_workspace, onboarding_completed_at is not null as onboarded from public.profiles where id='${outsider}'`,
+    )
+  )[0].rows[0];
+  assert.equal(outsiderProfile.role, "instructor");
+  assert.equal(outsiderProfile.intended_workspace, "teach");
+  assert.equal(outsiderProfile.onboarded, true);
 
   await db.close();
 });

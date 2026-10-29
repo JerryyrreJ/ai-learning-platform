@@ -16,10 +16,53 @@ import {
 import { useLearner } from "@/lib/learner-store";
 import { GOAL_LABELS, LEARNING_STYLE_LABELS, type Course } from "@/lib/types";
 
+type AttemptRow = {
+  id: string;
+  course_id: string;
+  lesson_id: string;
+  activity_id: string;
+  score: number | null;
+  feedback: unknown;
+  created_at: string;
+};
+
+function feedbackSummary(feedback: unknown): string | null {
+  if (!feedback || typeof feedback !== "object") return null;
+  const value = feedback as Record<string, unknown>;
+  if (typeof value.summary === "string" && value.summary.trim()) {
+    return value.summary.trim();
+  }
+  if (typeof value.overall === "string" && value.overall.trim()) {
+    return value.overall.trim();
+  }
+  if (Array.isArray(value.cards)) {
+    const titles = value.cards
+      .map((card) =>
+        card && typeof card === "object" && typeof (card as { title?: unknown }).title === "string"
+          ? (card as { title: string }).title
+          : null,
+      )
+      .filter((title): title is string => !!title);
+    if (titles.length) return `AI Fluency: ${titles.join(", ")}`;
+  }
+  if (Array.isArray(value.criteria)) {
+    const notes = value.criteria
+      .map((item) =>
+        item && typeof item === "object" && typeof (item as { feedback?: unknown }).feedback === "string"
+          ? (item as { feedback: string }).feedback
+          : null,
+      )
+      .filter((note): note is string => !!note);
+    if (notes[0]) return notes[0];
+  }
+  return null;
+}
+
 export default function DashboardPage() {
   const [courses, setCourses] = useState<Course[]>(catalogCourses);
   const { ready, profile, progress, user } = useLearner();
   const [isTeacher, setIsTeacher] = useState(false);
+  const [attempts, setAttempts] = useState<AttemptRow[]>([]);
 
   useEffect(() => {
     fetch("/api/courses?accessible=1")
@@ -41,6 +84,7 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!user) {
       setIsTeacher(false);
+      setAttempts([]);
       return;
     }
     let active = true;
@@ -51,6 +95,14 @@ export default function DashboardPage() {
       })
       .catch(() => {
         if (active) setIsTeacher(false);
+      });
+    fetch("/api/me/attempts")
+      .then((res) => (res.ok ? res.json() : []))
+      .then((rows) => {
+        if (active && Array.isArray(rows)) setAttempts(rows as AttemptRow[]);
+      })
+      .catch(() => {
+        if (active) setAttempts([]);
       });
     return () => {
       active = false;
@@ -249,11 +301,47 @@ export default function DashboardPage() {
         )}
       </section>
 
-      {feedbackSnips.length > 0 && (
-        <section>
-          <h2 className="text-lg font-semibold text-stone-900">
-            Recent scored activity results
-          </h2>
+      <section>
+        <h2 className="text-lg font-semibold text-stone-900">Feedback history</h2>
+        <p className="mt-1 text-sm text-stone-500">
+          Qualitative AI feedback and scored attempts from your saved learning records.
+        </p>
+        {attempts.length ? (
+          <ul className="mt-3 divide-y divide-stone-100 rounded-2xl border border-stone-200 bg-white">
+            {attempts.slice(0, 12).map((attempt) => {
+              const course = courses.find((item) => item.id === attempt.course_id);
+              const lesson = course?.lessons.find((item) => item.id === attempt.lesson_id);
+              const summary = feedbackSummary(attempt.feedback);
+              return (
+                <li key={attempt.id} className="space-y-1 px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <Link
+                      href={`/courses/${attempt.course_id}/${attempt.lesson_id}`}
+                      className="font-medium text-stone-800 hover:text-indigo-600"
+                    >
+                      {course?.title ?? "Course"} · {lesson?.title ?? attempt.lesson_id}
+                    </Link>
+                    <span className="text-stone-500">
+                      {typeof attempt.score === "number"
+                        ? `${Math.round(attempt.score * 100)}%`
+                        : new Date(attempt.created_at).toLocaleString()}
+                    </span>
+                  </div>
+                  {summary ? (
+                    <p className="text-stone-600">{summary}</p>
+                  ) : (
+                    <p className="text-stone-400">
+                      Recorded attempt
+                      {typeof attempt.score !== "number"
+                        ? ` · ${new Date(attempt.created_at).toLocaleString()}`
+                        : ""}
+                    </p>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        ) : feedbackSnips.length ? (
           <ul className="mt-3 divide-y divide-stone-100 rounded-2xl border border-stone-200 bg-white">
             {feedbackSnips.map((item) => (
               <li
@@ -270,8 +358,13 @@ export default function DashboardPage() {
               </li>
             ))}
           </ul>
-        </section>
-      )}
+        ) : (
+          <p className="mt-2 text-sm text-stone-500">
+            No saved feedback yet. Complete a quiz, conversation or immersive project in a
+            database course to see it here.
+          </p>
+        )}
+      </section>
 
       <CourseProgressList courses={courses} progress={progress} />
     </div>

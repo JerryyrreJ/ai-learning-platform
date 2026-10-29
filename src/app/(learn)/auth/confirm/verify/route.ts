@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
   const form = await request.formData();
   const tokenHash = String(form.get("token_hash") ?? "");
   const requestedType = String(form.get("type") ?? "magiclink");
-  const next = safeNextPath(form.get("next"), "/onboarding");
+  const next = safeNextPath(form.get("next"), "/");
 
   const redirect = (path: string) =>
     NextResponse.redirect(new URL(path, origin), 303);
@@ -29,7 +29,10 @@ export async function POST(request: NextRequest) {
     return redirect("/auth/confirm?error=invalid");
   }
 
-  const response = NextResponse.redirect(new URL(next, origin), 303);
+  // Route through /auth/callback so first-time onboarding is checked the same
+  // way as GitHub OAuth, instead of jumping straight to `next`.
+  const callback = `/auth/callback?${new URLSearchParams({ next })}`;
+  const response = NextResponse.redirect(new URL(callback, origin), 303);
   const supabase = createServerClient(url, key, {
     cookies: {
       getAll: () => request.cookies.getAll(),
