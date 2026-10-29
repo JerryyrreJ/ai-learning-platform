@@ -76,7 +76,7 @@ export function TeachShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-stone-50 lg:flex">
       <aside className="border-b border-stone-800 bg-stone-950 text-stone-300 lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:shrink-0 lg:border-b-0 lg:border-r">
         <div className="flex h-16 items-center gap-2 px-5">
-          <span className="grid h-8 w-8 place-items-center rounded-lg bg-indigo-500 text-sm font-semibold text-white">
+          <span className="grid h-8 w-8 place-items-center rounded-lg bg-gradient-to-br from-cyan-400 via-indigo-500 to-fuchsia-500 text-sm font-semibold text-white">
             DP
           </span>
           <span className="font-semibold text-white">DevPath</span>
@@ -123,7 +123,7 @@ export function TeachShell({ children }: { children: React.ReactNode }) {
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <Link
               href="/"
-              className="hidden rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 sm:inline-flex"
+              className="hidden rounded-full border border-stone-300 bg-white px-4 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-100 sm:inline-flex"
             >
               View as learner
             </Link>

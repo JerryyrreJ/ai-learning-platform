@@ -1,8 +1,8 @@
-import { ClassicNavBar } from "@/components/classic/NavBar";
+import { NavBar } from "@/components/NavBar";
 
 /**
- * The course platform keeps its original light shell. DevPath's project pages
- * use the dark (learn) shell, so the two experiences do not fight over styles.
+ * The course platform keeps its paper surface, but shares DevPath's navigation,
+ * logo and type so the two products read as one site.
  */
 export default function ClassicLayout({
   children,
@@ -11,7 +11,7 @@ export default function ClassicLayout({
 }) {
   return (
     <div className="min-h-dvh bg-stone-50 text-stone-900">
-      <ClassicNavBar />
+      <NavBar tone="light" />
       <main>{children}</main>
     </div>
   );

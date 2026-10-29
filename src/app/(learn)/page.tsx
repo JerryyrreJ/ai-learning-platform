@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Reveal } from "@/components/home/Reveal";
+import { catalogCourses } from "@/content/courses";
 import { SpotlightCard } from "@/components/home/SpotlightCard";
 import { TourLink } from "@/components/home/TourLink";
 import { glass } from "@/components/home/glass";
@@ -219,6 +220,47 @@ export default function Home() {
               </div>
             ))}
           </div>
+        </Reveal>
+      </section>
+
+      {/* Courses: the same catalogue the light course surface shows */}
+      <section id="courses" className={`${column} scroll-mt-32 py-20`}>
+        <Reveal>
+          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-indigo-300/80">Courses</p>
+          <h2 className="mt-3 text-balance text-3xl font-bold tracking-tight sm:text-5xl">
+            Guided courses, with the same tutor on every page.
+          </h2>
+          <p className="mt-4 max-w-2xl text-lg text-white/65">
+            When you want structure, follow a course: short lessons, hands-on activities and a tutor that explains ideas your way.
+          </p>
+        </Reveal>
+        <div className="mt-12 grid gap-4 sm:grid-cols-2">
+          {catalogCourses.map((course, index) => (
+            <Reveal key={course.id} delay={index * 100}>
+              <Link href={`/courses/${course.id}`} className="block h-full">
+                <SpotlightCard className="h-full p-6">
+                  <div className="flex items-center gap-4">
+                    <span className="grid h-11 w-11 place-items-center rounded-xl bg-gradient-to-br from-indigo-500/30 via-violet-500/20 to-fuchsia-500/30 text-2xl">
+                      {course.emoji}
+                    </span>
+                    <div>
+                      <h3 className="text-lg font-semibold">{course.title}</h3>
+                      <p className="text-xs text-white/45">
+                        {course.level} · {course.lessons.length} lessons
+                      </p>
+                    </div>
+                  </div>
+                  <p className="mt-4 text-sm leading-relaxed text-white/60">{course.tagline}</p>
+                  <p className="mt-5 text-sm font-medium text-white/75">Open course →</p>
+                </SpotlightCard>
+              </Link>
+            </Reveal>
+          ))}
+        </div>
+        <Reveal delay={200} className="mt-8 text-center">
+          <Link href="/courses" className={secondary}>
+            Browse all courses
+          </Link>
         </Reveal>
       </section>
 

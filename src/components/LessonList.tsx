@@ -53,7 +53,7 @@ export function LessonList({ course }: { course: Course }) {
                       {f}
                     </span>
                   ))}
-                  {i === nextIndex && <span className="rounded-full bg-indigo-600 px-2 py-0.5 text-xs text-white">Up next</span>}
+                  {i === nextIndex && <span className="rounded-full bg-gradient-to-r from-indigo-600 to-fuchsia-500 px-2 py-0.5 text-xs text-white">Up next</span>}
                 </div>
               </div>
             </Link>
