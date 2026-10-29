@@ -4,10 +4,24 @@ import { aiCodingAgents } from "./ai-coding-agents";
 import { presentationDemos } from "./presentation-demos";
 import { seEssentials } from "./se-essentials";
 
-/** Public catalogue. Presentation demos stay reachable by direct link only. */
-export const catalogCourses: Course[] = [seEssentials, aiCodingAgents];
+/** Cross-domain demos that belong in the public catalogue. */
+const publicPresentationDemos = presentationDemos.filter((course) =>
+  ["demo-english-negotiation", "demo-business-negotiation"].includes(course.id),
+);
 
-export const courses: Course[] = [...catalogCourses, ...presentationDemos];
+/**
+ * Public catalogue. Includes at least one non-software subject so the platform
+ * demonstrates general-purpose learning, not only SE examples.
+ */
+export const catalogCourses: Course[] = [
+  seEssentials,
+  aiCodingAgents,
+  ...publicPresentationDemos,
+];
+
+export const courses: Course[] = [...catalogCourses, ...presentationDemos].filter(
+  (course, index, all) => all.findIndex((item) => item.id === course.id) === index,
+);
 
 export function isPresentationDemo(id: string): boolean {
   return presentationDemos.some((course) => course.id === id);

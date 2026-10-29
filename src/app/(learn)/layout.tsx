@@ -9,7 +9,9 @@ export default function LearnLayout({
   return (
     <>
       <NavBar />
-      <main><PublicSurface>{children}</PublicSurface></main>
+      <main>
+        <PublicSurface>{children}</PublicSurface>
+      </main>
     </>
   );
 }
