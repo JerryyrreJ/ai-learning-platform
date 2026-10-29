@@ -1,3 +1,4 @@
+import { isDatabaseCourseId } from "./ids";
 import { getCourse as staticCourse, catalogCourses } from "@/content/courses";
 import { serverDb, HttpError } from "@/lib/supabase/server";
 import { adaptStaticCourse } from "./legacy";
@@ -9,6 +10,7 @@ import { redactCourseSimulations } from "./simulation/public";
 export async function readCourse(id: string): Promise<Course | undefined> {
   const demo = staticCourse(id);
   if (demo) return adaptStaticCourse(demo);
+  if (!isDatabaseCourseId(id)) return undefined;
   const db = await serverDb();
   if (!db) return undefined;
   const { data, error } = await db
@@ -16,6 +18,7 @@ export async function readCourse(id: string): Promise<Course | undefined> {
     .select("document")
     .eq("id", id)
     .maybeSingle();
+  if (error?.code === "22P02" || error?.code === "PGRST116") return undefined;
   if (error)
     throw new HttpError(
       503,

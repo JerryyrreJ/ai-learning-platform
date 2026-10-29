@@ -41,8 +41,7 @@ function OnboardingInner() {
   const [displayName, setDisplayName] = useState("");
   const [language, setLanguage] = useState<Language>("en");
   const [goal, setGoal] = useState<Goal>("understand");
-  const [learningStyle, setLearningStyle] =
-    useState<LearningStyle>("balanced");
+  const [learningStyle, setLearningStyle] = useState<LearningStyle>("balanced");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [activating, setActivating] = useState(false);
@@ -89,7 +88,9 @@ function OnboardingInner() {
     setActivating(true);
     setError(null);
     try {
-      const res = await fetch("/api/me/activate-instructor", { method: "POST" });
+      const res = await fetch("/api/me/activate-instructor", {
+        method: "POST",
+      });
       const body = await res.json().catch(() => ({}));
       if (!res.ok) {
         throw new Error(body.error || "Could not activate Teaching Studio.");
@@ -105,7 +106,9 @@ function OnboardingInner() {
 
   async function completeIntention(choice: Intention) {
     if (!user) {
-      router.push(`/login?next=${encodeURIComponent(`/onboarding?intent=${choice}`)}`);
+      router.push(
+        `/login?next=${encodeURIComponent(`/onboarding?intent=${choice}`)}`,
+      );
       return;
     }
     setIntention(choice);
@@ -127,15 +130,6 @@ function OnboardingInner() {
       setAccount(body as AccountInfo);
       if (choice === "teach") {
         router.replace("/teach");
-        router.refresh();
-        return;
-      }
-      const destination =
-        nextPath && nextPath !== "/" && nextPath !== "/onboarding"
-          ? nextPath
-          : "/dashboard";
-      if (profile) {
-        router.replace(destination);
         router.refresh();
         return;
       }
@@ -166,8 +160,21 @@ function OnboardingInner() {
         await activateTeaching();
         return;
       }
+      const completed = await fetch("/api/me", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          intention: "learn",
+          preferencesCompleted: true,
+        }),
+      });
+      if (!completed.ok)
+        throw new Error("Could not complete onboarding. Please retry.");
       const destination =
-        nextPath && nextPath !== "/" && nextPath !== "/onboarding"
+        account?.onboardingCompleted &&
+        nextPath &&
+        nextPath !== "/" &&
+        nextPath !== "/onboarding"
           ? nextPath
           : "/dashboard";
       router.replace(destination);
@@ -210,7 +217,9 @@ function OnboardingInner() {
   if (forceTeach && account?.isTeacher) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
-        <h1 className="text-3xl font-bold text-stone-900">Teaching Studio is ready</h1>
+        <h1 className="text-3xl font-bold text-stone-900">
+          Teaching Studio is ready
+        </h1>
         <p className="mt-2 text-stone-600">
           Your account already has instructor access. You can keep learning as a
           student on the same account.
@@ -238,8 +247,8 @@ function OnboardingInner() {
       <div className="mx-auto max-w-2xl px-4 py-10 sm:py-14">
         <h1 className="text-3xl font-bold text-stone-900">Start Teaching</h1>
         <p className="mt-2 text-stone-600">
-          Activate Teaching Studio on this account. You keep full student access.
-          Administrator privileges are never granted here.
+          Activate Teaching Studio on this account. You keep full student
+          access. Administrator privileges are never granted here.
         </p>
         {!account.emailVerified && (
           <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
@@ -267,13 +276,15 @@ function OnboardingInner() {
     return (
       <div className="mx-auto max-w-3xl px-4 py-10 sm:py-14">
         <header>
-          <p className="text-sm font-semibold text-indigo-600">Welcome to DevPath</p>
+          <p className="text-sm font-semibold text-indigo-600">
+            Welcome to DevPath
+          </p>
           <h1 className="mt-2 text-3xl font-bold tracking-tight text-stone-900">
             How do you intend to use DevPath?
           </h1>
           <p className="mt-2 max-w-2xl text-stone-600">
-            These are onboarding intentions, not exclusive account types. You can
-            learn and teach from the same account.
+            These are onboarding intentions, not exclusive account types. You
+            can learn and teach from the same account.
           </p>
         </header>
 
@@ -297,8 +308,8 @@ function OnboardingInner() {
           </p>
         )}
         <p className="mt-6 text-sm text-stone-500">
-          You can change preferences later. Students can activate Teaching Studio
-          any time from the account menu.
+          You can change preferences later. Students can activate Teaching
+          Studio any time from the account menu.
         </p>
       </div>
     );
@@ -319,7 +330,8 @@ function OnboardingInner() {
       <form onSubmit={submitPreferences} className="mt-8 space-y-7" noValidate>
         <label className="block">
           <span className="font-medium text-stone-900">
-            Display name <span className="font-normal text-stone-500">(optional)</span>
+            Display name{" "}
+            <span className="font-normal text-stone-500">(optional)</span>
           </span>
           <input
             value={displayName}
@@ -402,7 +414,9 @@ function IntentionCard({
       className="rounded-2xl border border-stone-200 bg-white p-6 text-left shadow-sm transition hover:border-indigo-300 hover:shadow-md disabled:opacity-50"
     >
       <h2 className="text-xl font-semibold text-stone-900">{title}</h2>
-      <p className="mt-2 text-sm leading-relaxed text-stone-600">{description}</p>
+      <p className="mt-2 text-sm leading-relaxed text-stone-600">
+        {description}
+      </p>
       <p className="mt-4 text-sm font-medium text-indigo-600">Continue →</p>
     </button>
   );

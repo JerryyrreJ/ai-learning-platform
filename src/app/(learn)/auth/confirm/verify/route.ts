@@ -13,11 +13,26 @@ const CONFIRM_TYPES = new Set([
 ]);
 
 export async function POST(request: NextRequest) {
-  const origin = request.nextUrl.origin;
+  // Next may normalize nextUrl to its internal bind address behind a proxy.
+  // Use the browser's origin only when it matches this request's routed Host.
+  const browserOrigin = request.headers.get("origin");
+  const parsedOrigin =
+    browserOrigin && URL.canParse(browserOrigin)
+      ? new URL(browserOrigin)
+      : null;
+  const origin =
+    parsedOrigin &&
+    ["http:", "https:"].includes(parsedOrigin.protocol) &&
+    parsedOrigin.host === request.headers.get("host")
+      ? parsedOrigin.origin
+      : request.nextUrl.origin;
   const form = await request.formData();
   const tokenHash = String(form.get("token_hash") ?? "");
   const requestedType = String(form.get("type") ?? "magiclink");
-  const next = requestedType === "recovery" ? "/auth/reset-password" : safeNextPath(form.get("next"), "/");
+  const next =
+    requestedType === "recovery"
+      ? "/auth/reset-password"
+      : safeNextPath(form.get("next"), "/");
 
   const redirect = (path: string) =>
     NextResponse.redirect(new URL(path, origin), 303);

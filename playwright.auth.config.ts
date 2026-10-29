@@ -32,6 +32,7 @@ export default defineConfig({
         DEVPATH_AUTH_E2E: "1",
         NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54329",
         NEXT_PUBLIC_SUPABASE_ANON_KEY: "fixture-publishable-key",
+        SUPABASE_SERVICE_ROLE_KEY: "fixture-service-key",
       },
     },
   ],

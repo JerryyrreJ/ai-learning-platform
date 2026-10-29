@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useState } from "react";
 import { accountRequest, authClient } from "@/lib/auth/browser";
 import { authError } from "@/lib/auth/policy";
@@ -102,6 +103,9 @@ export function PasswordForm({
         {busy ? "Saving…" : "Save password"}
       </button>
       <Notice error={error} message={message} />
+      <Link href="/forgot-password" className="block text-sm text-cyan-200">
+        Reset an unknown password by email
+      </Link>
     </form>
   );
 }

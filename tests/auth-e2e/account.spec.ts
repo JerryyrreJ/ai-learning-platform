@@ -3,6 +3,20 @@ const fixture = "http://127.0.0.1:54329";
 async function signIn(page: Page, mode = "existing", next = "/account") {
   await page.request.post(`${fixture}/__test/reset`, { data: { mode } });
   await page.goto(`/login?next=${encodeURIComponent(next)}`);
+  if (
+    [
+      "passkey",
+      "expired",
+      "random",
+      "magic",
+      "admin",
+      "github",
+      "random-mfa",
+    ].includes(mode)
+  ) {
+    await page.getByRole("button", { name: "GitHub", exact: true }).click();
+    return;
+  }
   await page.getByLabel("Email", { exact: true }).fill(`${mode}@example.test`);
   await page.getByLabel("Password", { exact: true }).fill("correct-password");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -94,7 +108,7 @@ test("GitHub's existing identity adds a password after a cancelled passkey", asy
   await page
     .getByRole("button", { name: "Save password", exact: true })
     .click();
-  await expect(page).toHaveURL(/\/account$/);
+  await expect(page).toHaveURL(/\/onboarding/);
   const state = await (
     await page.request.get(`${fixture}/__test/state`)
   ).json();
@@ -102,20 +116,19 @@ test("GitHub's existing identity adds a password after a cancelled passkey", asy
   expect(state.reviewed).toBe(true);
 });
 
-test("password users get one optional passkey recommendation before onboarding", async ({
+test("verified password users enter onboarding without resetting their password", async ({
   page,
 }) => {
   await signIn(page, "password", "/courses");
-  await expect(page).toHaveURL(/\/auth\/setup/);
-  await expect(
-    page.getByText("Your password is already set.", { exact: false }),
-  ).toBeVisible();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await expect(page).toHaveURL(/\/onboarding/);
-  const state = await (
-    await page.request.get(`${fixture}/__test/state`)
-  ).json();
-  expect(state.reviewed).toBe(true);
+  await page.getByRole("button", { name: /I'm here to learn/ }).click();
+  await expect(
+    page.getByRole("heading", { name: "Make learning yours." }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Save preferences", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/dashboard$/);
 });
 
 test("profile, email, password mutations use authenticated APIs", async ({
@@ -307,7 +320,7 @@ test("recovery callback reaches password update before onboarding and rejects ex
     "/api/account/destination?next=https://evil.test",
   );
   const { destination } = await response.json();
-  expect(destination).toMatch(/^\/auth\/setup\?next=%2F$/);
+  expect(destination).toMatch(/^\/onboarding\?next=%2F$/);
 });
 
 test("authenticated onboarding saves preferences and reloads them from the same profile", async ({
@@ -361,4 +374,109 @@ test("authenticated legacy profile preferences migrate without losing background
   expect(state.preferences.background).toBe("cs_graduate");
   expect(state.preferences.experience).toBe("comfortable");
   expect(state.preferences.language).toBe("zh-Hant");
+});
+
+for (const mode of ["random", "magic", "admin"])
+  test(`${mode} hash does not bypass credential setup or business authorization`, async ({
+    page,
+  }) => {
+    await signIn(page, mode, "/dashboard");
+    await expect(page).toHaveURL(/\/auth\/setup/);
+    await expect(
+      page.getByRole("button", { name: "Continue", exact: true }),
+    ).not.toBeVisible();
+    const account = await (await page.request.get("/api/account")).json();
+    expect(account.hasPassword).toBe(false);
+    for (const path of ["/dashboard", "/teach"]) {
+      await page.goto(path);
+      await expect(page).toHaveURL(/\/auth\/setup/);
+    }
+    for (const path of ["/api/me", "/api/me/attempts"])
+      expect((await page.request.get(path)).status()).toBe(403);
+    expect(
+      (
+        await page.request.post("/api/account", {
+          headers: { Origin: "http://localhost:3101" },
+          data: { action: "completeSetup" },
+        })
+      ).status(),
+    ).toBe(409);
+    await page.getByRole("button", { name: "Use a password instead" }).click();
+    await expect(
+      page.getByLabel("Current password (if required)", { exact: true }),
+    ).not.toBeVisible();
+    await page
+      .getByLabel("New password", { exact: true })
+      .fill("my-owned-new-password");
+    await page
+      .getByLabel("Confirm new password", { exact: true })
+      .fill("my-owned-new-password");
+    await page
+      .getByRole("button", { name: "Save password", exact: true })
+      .click();
+    await expect(page).toHaveURL(/\/onboarding/);
+    expect(
+      (await (await page.request.get("/api/account")).json()).hasPassword,
+    ).toBe(true);
+  });
+
+test("signup email confirmation requires real password ownership, not email/signup AMR alone", async ({
+  page,
+}) => {
+  await page.request.post(`${fixture}/__test/reset`, {
+    data: { mode: "signup" },
+  });
+  await page.goto(
+    "/auth/confirm?token_hash=signup-test&type=signup&next=/dashboard",
+  );
+  await page
+    .getByRole("button", { name: "Sign in to DevPath", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/auth\/setup/);
+  expect(
+    (await (await page.request.get("/api/account")).json()).hasPassword,
+  ).toBe(false);
+  await page.getByRole("button", { name: "Use a password instead" }).click();
+  await page
+    .getByText("Already know your password? Verify it instead", { exact: true })
+    .click();
+  await page
+    .getByLabel("Existing password", { exact: true })
+    .fill("wrong-password");
+  await page
+    .getByRole("button", { name: "Verify existing password", exact: true })
+    .click();
+  await expect(page.locator("p[role=alert]")).toContainText(
+    "could not be verified",
+  );
+  await page
+    .getByLabel("Existing password", { exact: true })
+    .fill("correct-password");
+  await page
+    .getByRole("button", { name: "Verify existing password", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/onboarding/);
+});
+
+test("untrusted TOTP account must pass MFA before creating any credential", async ({
+  page,
+}) => {
+  await signIn(page, "random-mfa", "/dashboard");
+  await expect(page).toHaveURL(/\/auth\/mfa/);
+  await page.goto("/auth/setup");
+  await expect(page).toHaveURL(/\/auth\/mfa/);
+  expect(
+    (
+      await page.request.post("/api/account", {
+        headers: { Origin: "http://localhost:3101" },
+        data: { action: "verifyPassword", password: "correct-password" },
+      })
+    ).status(),
+  ).toBe(403);
+  await page.getByLabel("Verification code", { exact: true }).fill("123456");
+  await page.getByRole("button", { name: "Verify", exact: true }).click();
+  await expect(page).toHaveURL(/\/auth\/setup/);
+  expect(
+    (await (await page.request.get("/api/account")).json()).hasPassword,
+  ).toBe(false);
 });

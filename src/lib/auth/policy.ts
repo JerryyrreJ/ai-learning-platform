@@ -66,7 +66,7 @@ export function accountDestination(
     : safe;
   const suffix = `?next=${encodeURIComponent(target)}`;
   if (state.mfaRequired) return `/auth/mfa${suffix}`;
-  if ((!state.hasPassword && state.passkeyCount === 0) || !state.setupReviewed)
+  if (!state.hasPassword && state.passkeyCount === 0)
     return `/auth/setup${suffix}`;
   return state.onboardingCompleted ? target : `/onboarding${suffix}`;
 }

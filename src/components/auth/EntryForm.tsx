@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import {
   authClient,
+  accountRequest,
   callbackUrl,
   finishSignIn,
   nextPath,
@@ -63,14 +64,26 @@ export function EntryForm({ mode }: { mode: "login" | "signup" | "reset" }) {
           options: { emailRedirectTo: callbackUrl() },
         });
         if (error) throw error;
-        if (data.session) await finishSignIn();
-        else
+        if (data.session) {
+          await accountRequest({ action: "verifyPassword", password });
+          await finishSignIn();
+        } else
           setMessage(
             "Check your email to confirm your account, then continue in this browser. If you already have an account, sign in or reset your password.",
           );
       } else {
         const { error } = await auth.signInWithPassword({ email, password });
         if (error) throw error;
+        const { data: assurance, error: assuranceError } =
+          await auth.mfa.getAuthenticatorAssuranceLevel();
+        if (assuranceError) throw assuranceError;
+        // Do not retain a plaintext password through a redirect/MFA challenge.
+        // Existing trust stays valid; untrusted MFA users verify once after TOTP.
+        if (
+          assurance?.nextLevel !== "aal2" ||
+          assurance.currentLevel === "aal2"
+        )
+          await accountRequest({ action: "verifyPassword", password });
         await finishSignIn();
       }
     });

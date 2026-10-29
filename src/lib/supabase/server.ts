@@ -2,7 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { HttpError } from "@/lib/http-error";
 export { HttpError } from "@/lib/http-error";
-import { assertMfa } from "@/lib/auth/security";
+import { assertMfa, assertCredentialReady } from "@/lib/auth/security";
 import { cookies } from "next/headers";
 
 export async function serverDb() {
@@ -26,7 +26,7 @@ export async function serverDb() {
     },
   });
 }
-export async function requireAccount(teacher = false) {
+export async function requireAuthenticatedAccount(teacher = false) {
   const db = await serverDb();
   if (!db)
     throw new HttpError(
@@ -47,6 +47,12 @@ export async function requireAccount(teacher = false) {
     throw new HttpError(403, "Instructor access required.");
   return { db, user: data.user, isTeacher };
 }
+/** Business authorization always includes mandatory credential readiness. */
+export async function requireAccount(teacher = false) {
+  const account = await requireAuthenticatedAccount(teacher);
+  await assertCredentialReady(account.db);
+  return account;
+}
 /**
  * The service key from the environment. Keys never contain whitespace, so any
  * is removed: a line break pasted into the dashboard otherwise makes every
@@ -60,7 +66,10 @@ export function serviceRoleKey(raw = process.env.SUPABASE_SERVICE_ROLE_KEY) {
 export function redactSecrets(text: string) {
   return text
     .replace(/sb_(secret|publishable)_[A-Za-z0-9_\-\r\n]+/g, "sb_$1_[redacted]")
-    .replace(/eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g, "[redacted jwt]");
+    .replace(
+      /eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*/g,
+      "[redacted jwt]",
+    );
 }
 
 // Only used after authorizing an activity against the user's RLS-scoped client.
@@ -103,7 +112,11 @@ export function apiError(error: unknown) {
   if (error instanceof HttpError)
     return Response.json({ error: error.message }, { status: error.status });
   const detail =
-    error instanceof Error ? (error.stack ?? error.message) : typeof error === "object" ? JSON.stringify(error) : String(error);
+    error instanceof Error
+      ? (error.stack ?? error.message)
+      : typeof error === "object"
+        ? JSON.stringify(error)
+        : String(error);
   console.error(redactSecrets(detail));
   const mapped = DATABASE_ERRORS[databaseCode(error) ?? ""];
   if (mapped)

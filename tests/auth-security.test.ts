@@ -13,7 +13,7 @@ import {
 
 const user = "00000000-0000-4000-8000-000000000001";
 const other = "00000000-0000-4000-8000-000000000002";
-test("routing checks MFA, real credentials, optional recommendation, then workspace onboarding", () => {
+test("routing checks MFA, trusted credentials, then workspace onboarding", () => {
   const ready = {
     hasPassword: true,
     passkeyCount: 0,
@@ -30,9 +30,9 @@ test("routing checks MFA, real credentials, optional recommendation, then worksp
     accountDestination("/teach", { ...ready, hasPassword: false }),
     /^\/auth\/setup/,
   );
-  assert.match(
+  assert.equal(
     accountDestination("/teach", { ...ready, setupReviewed: false }),
-    /^\/auth\/setup/,
+    "/teach",
   );
   assert.match(
     accountDestination("/teach", { ...ready, onboardingCompleted: false }),
@@ -97,6 +97,7 @@ test("all migrations: authoritative password state, MFA RLS and definer RPCs ret
   try {
     await db.exec(readFileSync("scripts/pg-auth-shim.sql", "utf8"));
     await db.exec(`alter table auth.users add column encrypted_password text;
+      create table auth.webauthn_credentials(id uuid primary key,user_id uuid references auth.users(id));
       create table auth.mfa_factors (id uuid primary key, user_id uuid references auth.users(id), status text);
       create function auth.jwt() returns jsonb language sql stable as $$select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb$$;`);
     await db.exec("revoke all on auth.users from anon, authenticated;");
@@ -105,7 +106,7 @@ test("all migrations: authoritative password state, MFA RLS and definer RPCs ret
       .sort())
       await db.exec(readFileSync(`supabase/migrations/${file}`, "utf8"));
     await db.exec(`insert into auth.users (id,email,email_confirmed_at,encrypted_password) values
-      ('${user}','github@example.test',now(),null), ('${other}','password@example.test',now(),'test-hash');`);
+      ('${user}','github@example.test',now(),'random-unknown-hash'), ('${other}','password@example.test',now(),'test-hash');`);
     async function as(id: string, aal: string, sql: string) {
       await db.exec(
         `set role authenticated; select set_config('request.jwt.claim.sub','${id}',false); select set_config('request.jwt.claims','{"sub":"${id}","aal":"${aal}"}',false);`,
@@ -123,6 +124,8 @@ test("all migrations: authoritative password state, MFA RLS and definer RPCs ret
     );
     assert.deepEqual(result[0].rows[0].state, {
       has_password: false,
+      credential_ready: false,
+      passkey_count: 0,
       setup_reviewed: false,
     });
     // Other users cannot be queried; there is no caller-selected id argument.
@@ -146,6 +149,8 @@ test("all migrations: authoritative password state, MFA RLS and definer RPCs ret
     );
     assert.deepEqual(result[0].rows[0].state, {
       has_password: false,
+      credential_ready: false,
+      passkey_count: 0,
       setup_reviewed: true,
     });
     result = await as(
@@ -155,6 +160,93 @@ test("all migrations: authoritative password state, MFA RLS and definer RPCs ret
     );
     assert.equal(
       (result[0].rows[0].state as { has_password: boolean }).has_password,
+      false,
+    );
+    // Nonempty hashes and mutable profile metadata cannot establish trust.
+    await assert.rejects(
+      as(
+        user,
+        "aal1",
+        `select public.confirm_password_credential('${user}','forged')`,
+      ),
+      /permission denied/,
+    );
+    await assert.rejects(
+      as(user, "aal1", "select * from private.password_credentials"),
+      /permission denied/,
+    );
+    for (const sql of [
+      "select public.activate_instructor()",
+      "select public.claim_course_invitations()",
+      "select public.consume_ai_quota('tutor',60,3600)",
+    ])
+      await assert.rejects(as(user, "aal1", sql), /Credential setup/);
+    const empty = await as(
+      user,
+      "aal1",
+      "select * from public.lesson_progress",
+    );
+    assert.equal(empty[0].rows.length, 0);
+    await assert.rejects(
+      as(
+        user,
+        "aal1",
+        "insert into public.activity_events(user_id,course_id,event_type) values(auth.uid(),'demo','open')",
+      ),
+      /row-level security/,
+    );
+    await db.exec(
+      `set role service_role; select public.confirm_password_credential('${other}',public.password_credential_version('${other}')); reset role;`,
+    );
+    result = await as(
+      other,
+      "aal1",
+      "select public.account_security_state() as state",
+    );
+    assert.equal(
+      (result[0].rows[0].state as { has_password: boolean }).has_password,
+      true,
+    );
+    const oldVersion = (
+      await db.query<{ version: string }>(
+        `select private.password_credential_version('${other}') as version`,
+      )
+    ).rows[0].version;
+    // An out-of-band native Auth password reset invalidates the old proof.
+    await db.exec(
+      `update auth.users set encrypted_password='rotated-random' where id='${other}'`,
+    );
+    result = await as(
+      other,
+      "aal1",
+      "select public.account_security_state() as state",
+    );
+    assert.equal(
+      (result[0].rows[0].state as { has_password: boolean }).has_password,
+      false,
+    );
+    await db.exec(
+      `set role service_role; select public.confirm_password_credential('${other}',public.password_credential_version('${other}')); reset role;`,
+    );
+    await db.exec("set role service_role");
+    const staleProof = await db.query<{ confirmed: boolean }>(
+      "select public.confirm_password_credential($1,$2) as confirmed",
+      [other, oldVersion],
+    );
+    await db.exec("reset role");
+    assert.equal(staleProof.rows[0].confirmed, false);
+    // Live native passkey registration independently establishes readiness.
+    await db.exec(
+      `insert into auth.webauthn_credentials values ('90000000-0000-4000-8000-000000000001','${user}')`,
+    );
+    result = await as(
+      user,
+      "aal1",
+      "select public.account_security_state() as state",
+    );
+    assert.equal(
+      (result[0].rows[0].state as { credential_ready: boolean })
+        .credential_ready,
       true,
     );
     await as(user, "aal1", "select public.activate_instructor()");
@@ -169,7 +261,10 @@ test("all migrations: authoritative password state, MFA RLS and definer RPCs ret
       "select public.consume_ai_quota('tutor',60,3600)",
       "select public.account_security_state()",
     ])
-      await assert.rejects(as(user, "aal1", sql), /MFA required/);
+      await assert.rejects(
+        as(user, "aal1", sql),
+        /MFA required|Credential setup/,
+      );
     await assert.rejects(
       as(
         user,
@@ -191,6 +286,23 @@ test("all migrations: authoritative password state, MFA RLS and definer RPCs ret
     );
     result = await as(other, "aal1", "select id from public.profiles");
     assert.deepEqual(result[0].rows, [{ id: other }]);
+    await db.exec(
+      `delete from auth.webauthn_credentials where user_id='${user}'`,
+    );
+    result = await as(
+      user,
+      "aal2",
+      "select public.account_security_state() as state",
+    );
+    assert.equal(
+      (result[0].rows[0].state as { credential_ready: boolean })
+        .credential_ready,
+      false,
+    );
+    await assert.rejects(
+      as(user, "aal2", "select public.consume_ai_quota('tutor',60,3600)"),
+      /Credential setup/,
+    );
     await db.exec("set role anon");
     await assert.rejects(
       db.exec("select public.account_security_state()"),

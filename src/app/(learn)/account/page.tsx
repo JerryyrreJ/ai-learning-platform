@@ -194,7 +194,7 @@ export default function AccountPage() {
             </h2>
             <div>
               <h3 className="mb-3 font-medium">
-                Password · {account.hasPassword ? "Set" : "Not set"}
+                Password · {account.hasPassword ? "Set" : "Not verified — set or verify your password"}
               </h3>
               <PasswordForm hasPassword={account.hasPassword} onSaved={load} />
             </div>

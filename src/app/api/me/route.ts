@@ -19,10 +19,12 @@ async function loadAccount() {
     .select("role, onboarding_completed_at, intended_workspace")
     .eq("id", user.id)
     .single();
-  if (error || !profile) throw new HttpError(403, "Your profile is unavailable.");
+  if (error || !profile)
+    throw new HttpError(403, "Your profile is unavailable.");
 
   const intended =
-    profile.intended_workspace === "learn" || profile.intended_workspace === "teach"
+    profile.intended_workspace === "learn" ||
+    profile.intended_workspace === "teach"
       ? profile.intended_workspace
       : null;
 
@@ -57,15 +59,21 @@ export async function POST(request: Request) {
     const body = (await request.json().catch(() => null)) as {
       intention?: unknown;
       displayName?: unknown;
+      preferencesCompleted?: unknown;
     } | null;
     const intention = body?.intention;
     if (intention !== "learn" && intention !== "teach") {
-      throw new HttpError(400, "Choose whether you are here to learn or to teach.");
+      throw new HttpError(
+        400,
+        "Choose whether you are here to learn or to teach.",
+      );
     }
 
     const { db, user } = await requireAccount();
     const displayName =
-      typeof body?.displayName === "string" ? body.displayName.trim().slice(0, 40) : "";
+      typeof body?.displayName === "string"
+        ? body.displayName.trim().slice(0, 40)
+        : "";
 
     if (displayName) {
       const { error: nameError } = await db
@@ -85,7 +93,10 @@ export async function POST(request: Request) {
       if (activateError) {
         const message = activateError.message ?? "";
         if (/confirm your email/i.test(message)) {
-          throw new HttpError(403, "Confirm your email before activating Teaching Studio.");
+          throw new HttpError(
+            403,
+            "Confirm your email before activating Teaching Studio.",
+          );
         }
         throw activateError;
       }
@@ -96,7 +107,9 @@ export async function POST(request: Request) {
       .from("profiles")
       .update({
         intended_workspace: "learn",
-        onboarding_completed_at: new Date().toISOString(),
+        ...(body?.preferencesCompleted === true
+          ? { onboarding_completed_at: new Date().toISOString() }
+          : {}),
         updated_at: new Date().toISOString(),
       })
       .eq("id", user.id);

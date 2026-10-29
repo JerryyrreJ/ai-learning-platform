@@ -32,12 +32,24 @@ export async function requireRecentAuthentication(
 
 export async function credentialState(db: SupabaseClient) {
   const { data, error } = await db.rpc("account_security_state");
-  if (error || !data || typeof data.has_password !== "boolean")
+  if (
+    error ||
+    !data ||
+    typeof data.has_password !== "boolean" ||
+    typeof data.credential_ready !== "boolean" ||
+    !Number.isInteger(data.passkey_count) ||
+    data.passkey_count < 0
+  )
     throw new HttpError(
       503,
-      "Account security is unavailable. Apply the account management migration and retry.",
+      "Account security is unavailable. Apply the mandatory trusted credentials migration and retry.",
     );
-  return data as { has_password: boolean; setup_reviewed: boolean };
+  return data as {
+    has_password: boolean;
+    setup_reviewed: boolean;
+    credential_ready: boolean;
+    passkey_count: number;
+  };
 }
 
 export async function listPasskeys(db: SupabaseClient) {
@@ -50,4 +62,13 @@ export async function listPasskeys(db: SupabaseClient) {
     return { passkeys: [], passkeysEnabled: false };
   if (error) throw new HttpError(503, "Could not load passkeys. Please retry.");
   return { passkeys: data ?? [], passkeysEnabled: true };
+}
+
+export async function assertCredentialReady(db: SupabaseClient) {
+  const state = await credentialState(db);
+  if (state.credential_ready !== true)
+    throw new HttpError(
+      403,
+      "CREDENTIAL_SETUP_REQUIRED: Create a passkey or verify/set a password before continuing.",
+    );
 }

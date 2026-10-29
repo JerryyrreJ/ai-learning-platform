@@ -7,6 +7,7 @@ import {
   primaryClass,
   secondaryClass,
 } from "@/components/auth/AuthUI";
+import { VerifyPasswordForm } from "@/components/auth/VerifyPasswordForm";
 import { PasswordForm } from "@/components/auth/PasswordForm";
 import {
   accountRequest,
@@ -128,7 +129,21 @@ export default function SetupPage() {
                   Continue with existing password
                 </button>
               ) : (
-                <PasswordForm onSaved={complete} />
+                <div className="space-y-6">
+                  <PasswordForm onSaved={complete} />
+                  <details>
+                    <summary className="mb-3 cursor-pointer text-sm text-cyan-200">
+                      Already know your password? Verify it instead
+                    </summary>
+                    <VerifyPasswordForm onVerified={complete} />
+                  </details>
+                  <Link
+                    className="text-sm text-cyan-200"
+                    href="/forgot-password"
+                  >
+                    Recover or reset an unknown password by email
+                  </Link>
+                </div>
               )}
             </div>
           )}

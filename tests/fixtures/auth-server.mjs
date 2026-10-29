@@ -12,13 +12,33 @@ function reset(mode = "existing") {
     mode,
     email: `${mode}@example.test`,
     password: mode !== "github" && mode !== "passkey",
+    trusted: ["existing", "mfa", "expired", "legacy"].includes(mode),
+    version: "fixture-hash-v1",
+    actualPassword: [
+      "github",
+      "passkey",
+      "random",
+      "magic",
+      "admin",
+      "random-mfa",
+    ].includes(mode)
+      ? "unknown-random-secret"
+      : "correct-password",
     reviewed:
       mode === "existing" ||
       mode === "mfa" ||
       mode === "expired" ||
       mode === "passkey" ||
       mode === "legacy",
-    onboarding: mode !== "password",
+    onboarding: ![
+      "password",
+      "signup",
+      "random",
+      "magic",
+      "admin",
+      "github",
+      "random-mfa",
+    ].includes(mode),
     display_name: mode === "legacy" ? "Old learner" : "Learner",
     preferences: {
       background: mode === "legacy" ? "cs_graduate" : null,
@@ -37,17 +57,16 @@ function reset(mode = "existing") {
             },
           ]
         : [],
-    factors:
-      mode === "mfa"
-        ? [
-            {
-              id: factorId,
-              factor_type: "totp",
-              status: "verified",
-              friendly_name: "Phone",
-            },
-          ]
-        : [],
+    factors: ["mfa", "random-mfa"].includes(mode)
+      ? [
+          {
+            id: factorId,
+            factor_type: "totp",
+            status: "verified",
+            friendly_name: "Phone",
+          },
+        ]
+      : [],
     calls: [],
     pendingEmail: null,
   };
@@ -150,7 +169,7 @@ createServer(async (req, res) => {
   if (path === "/auth/v1/token") {
     if (
       url.searchParams.get("grant_type") === "password" &&
-      body.password !== "correct-password"
+      body.password !== state.actualPassword
     )
       return fail();
     return send(
@@ -193,19 +212,48 @@ createServer(async (req, res) => {
   }
   if (path === "/auth/v1/passkeys/authentication/verify")
     return send(session("aal1", "passkey"));
-  if (path === "/auth/v1/verify") return send(session("aal1", "recovery"));
+  if (path === "/auth/v1/verify")
+    return send(
+      session(
+        "aal1",
+        body.type === "signup"
+          ? "email/signup"
+          : body.type === "recovery"
+            ? "recovery"
+            : "magiclink",
+      ),
+    );
+  if (
+    path === "/rest/v1/rpc/password_credential_version" ||
+    path === "/rest/v1/rpc/confirm_password_credential"
+  ) {
+    if (req.headers.authorization !== "Bearer fixture-service-key")
+      return fail("Forbidden", 403);
+    if (path.endsWith("password_credential_version"))
+      return send(state.version);
+    if (body.p_version !== state.version) return send(false);
+    state.trusted = true;
+    return send(true);
+  }
   const c = claims(req);
   if (!c) return fail("Auth session missing", 401, "session_not_found");
   if (path === "/auth/v1/user") {
     if (req.method === "PUT") {
-      if (body.password) state.password = true;
+      if (body.password) {
+        state.password = true;
+        state.actualPassword = body.password;
+        state.version += "-changed";
+        state.trusted = false;
+      }
       if (body.email) state.pendingEmail = body.email;
     }
     return send(user());
   }
   if (path === "/rest/v1/rpc/account_security_state")
     return send({
-      has_password: state.password,
+      has_password: state.trusted,
+      passkey_count: state.keys.length,
+      credential_ready: state.trusted || state.keys.length > 0,
       setup_reviewed: state.reviewed,
     });
   if (path === "/rest/v1/profiles") {
@@ -220,6 +268,7 @@ createServer(async (req, res) => {
       ])
         if (key in body) state.preferences[key] = body[key];
       if (body.security_setup_reviewed_at) state.reviewed = true;
+      if (body.onboarding_completed_at) state.onboarding = true;
     }
     const row = {
       id,

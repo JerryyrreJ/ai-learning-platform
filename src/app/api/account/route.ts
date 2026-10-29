@@ -1,5 +1,10 @@
+import { confirmPasswordOwnership } from "@/lib/auth/password-proof";
 import { z } from "zod";
-import { apiError, HttpError, requireAccount } from "@/lib/supabase/server";
+import {
+  apiError,
+  HttpError,
+  requireAuthenticatedAccount,
+} from "@/lib/supabase/server";
 import {
   credentialState,
   listPasskeys,
@@ -13,6 +18,10 @@ const actionSchema = z.discriminatedUnion("action", [
     displayName: z.string().trim().min(1).max(40),
   }),
   z.object({ action: z.literal("email"), email: z.email() }),
+  z.object({
+    action: z.literal("verifyPassword"),
+    password: z.string().min(1).max(128),
+  }),
   z.object({
     action: z.literal("password"),
     password: z.string().min(12).max(128),
@@ -33,7 +42,7 @@ const actionSchema = z.discriminatedUnion("action", [
 
 export async function GET() {
   try {
-    const { db, user } = await requireAccount();
+    const { db, user } = await requireAuthenticatedAccount();
     const [state, keys, profile] = await Promise.all([
       credentialState(db),
       listPasskeys(db),
@@ -47,6 +56,7 @@ export async function GET() {
         emailVerified: !!user.email_confirmed_at,
         displayName: profile.data.display_name ?? "",
         hasPassword: state.has_password,
+        credentialReady: state.credential_ready,
         setupReviewed: state.setup_reviewed,
         ...keys,
         factors: user.factors ?? [],
@@ -73,7 +83,7 @@ export async function POST(request: Request) {
         "Check the form values and try again. Passwords need 12–128 characters.",
       );
     const input = parsed.data;
-    const { db, user } = await requireAccount();
+    const { db, user } = await requireAuthenticatedAccount();
     if (input.action !== "profile" && input.action !== "completeSetup")
       await requireRecentAuthentication(db, user);
     let error;
@@ -101,6 +111,9 @@ export async function POST(request: Request) {
           .select("id")
           .single());
         break;
+      case "verifyPassword":
+        await confirmPasswordOwnership(user, input.password);
+        break;
       case "password":
         ({ error } = await db.auth.updateUser({
           password: input.password,
@@ -109,6 +122,7 @@ export async function POST(request: Request) {
             : {}),
           ...(input.nonce ? { nonce: input.nonce } : {}),
         }));
+        if (!error) await confirmPasswordOwnership(user, input.password);
         break;
       case "email":
         ({ error } = await db.auth.updateUser(
@@ -144,8 +158,7 @@ export async function POST(request: Request) {
       }
       case "completeSetup": {
         const state = await credentialState(db);
-        const keys = await listPasskeys(db);
-        if (!state.has_password && keys.passkeys.length === 0)
+        if (!state.credential_ready)
           throw new HttpError(409, "Create a passkey or set a password first.");
         ({ error } = await db
           .from("profiles")

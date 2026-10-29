@@ -7,7 +7,20 @@ import { requiresMfa } from "@/lib/auth/policy";
 export async function middleware(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!url || !key) return NextResponse.next();
+  const protectedPath =
+    /^\/(dashboard|teach|my-courses|studio|account)(\/|$)/.test(
+      request.nextUrl.pathname,
+    );
+  if (!url || !key) {
+    return protectedPath
+      ? NextResponse.redirect(
+          new URL(
+            `/login?next=${encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search)}`,
+            request.url,
+          ),
+        )
+      : NextResponse.next();
+  }
   let response = NextResponse.next({ request });
   const db = createServerClient(url, key, {
     auth: { experimental: { passkey: true } },
@@ -42,7 +55,7 @@ export async function middleware(request: NextRequest) {
     return result;
   }
   if (!user) {
-    if (path === "/account" || path.startsWith("/auth/"))
+    if (protectedPath || path.startsWith("/auth/"))
       return redirect(`/login?next=${encodeURIComponent(next)}`);
     return response;
   }
@@ -57,11 +70,8 @@ export async function middleware(request: NextRequest) {
   );
   if (stateError)
     return redirect(`/auth/setup?next=${encodeURIComponent(next)}`);
-  if (!state.has_password) {
-    const { data: keys, error: keysError } = await db.auth.passkey.list();
-    if (keysError || !keys?.length)
-      return redirect(`/auth/setup?next=${encodeURIComponent(next)}`);
-  }
+  if (state?.credential_ready !== true)
+    return redirect(`/auth/setup?next=${encodeURIComponent(next)}`);
   return response;
 }
 export const config = {
