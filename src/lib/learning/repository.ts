@@ -38,17 +38,28 @@ export async function readLesson(courseId: string, lessonId: string) {
   return course && lesson ? { course, lesson } : undefined;
 }
 export async function listCourses(): Promise<Course[]> {
+  const staticCatalogue = catalogCourses.map(adaptStaticCourse);
   const db = await serverDb();
-  if (!db) return catalogCourses.map(adaptStaticCourse);
-  const { data, error } = await db
-    .from("courses")
-    .select("document")
-    .eq("status", "published");
-  if (error)
-    throw new HttpError(
-      503,
-      "Course storage unavailable. Apply the database migrations.",
-    );
+  if (!db) return staticCatalogue;
+
+  // Local demos must still open when Supabase is configured but unreachable or
+  // missing migrations. Authored DB courses are additive when available.
+  let data: { document: unknown }[] | null = null;
+  try {
+    const result = await db
+      .from("courses")
+      .select("document")
+      .eq("status", "published");
+    if (result.error) {
+      console.error("Published course query failed; using static catalogue", result.error);
+      return staticCatalogue;
+    }
+    data = result.data;
+  } catch (error) {
+    console.error("Published course query failed; using static catalogue", error);
+    return staticCatalogue;
+  }
+
   const published: Course[] = [];
   for (const row of data ?? []) {
     try {
@@ -69,7 +80,7 @@ export async function listCourses(): Promise<Course[]> {
       console.error("Skipping malformed course", error);
     }
   }
-  return [...catalogCourses.map(adaptStaticCourse), ...published];
+  return [...staticCatalogue, ...published];
 }
 export async function ownedCourse(
   id: string,
