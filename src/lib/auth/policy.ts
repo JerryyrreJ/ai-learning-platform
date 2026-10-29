@@ -13,6 +13,7 @@ export function recentlyAuthenticated(amr: unknown, now = Date.now() / 1000) {
           "oauth",
           "otp",
           "magiclink",
+          "email/signup",
           "recovery",
           "passkey",
           "webauthn",

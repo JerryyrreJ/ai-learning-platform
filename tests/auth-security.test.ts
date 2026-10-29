@@ -65,6 +65,11 @@ test("reauthentication uses signed AMR timestamps, never token refresh time", ()
     false,
   );
   assert.equal(recentlyAuthenticated(["password"], 1000), false);
+  // Supabase records a just-confirmed signup link as "email/signup".
+  assert.equal(
+    recentlyAuthenticated([{ method: "email/signup", timestamp: 990 }], 1000),
+    true,
+  );
   assert.equal(
     requiresMfa({ factors: [{ status: "verified" }] }, "aal1"),
     true,
