@@ -40,17 +40,12 @@ export function CourseStudio(options: StudioOptions) {
           scoped ? "space-y-5" : "mx-auto max-w-6xl space-y-6 px-4 py-8"
         }
       >
-        {!scoped && (
+        {!scoped && teacher && (
           <>
-            <h1 className="text-3xl font-bold">
-              {teacher
-                ? "Teaching studio"
-                : "My private courses & learning path"}
-            </h1>
+            <h1 className="text-3xl font-bold">Teaching studio</h1>
             <p className="text-stone-600">
-              {teacher
-                ? "Design learning in any subject. Choose activities, review AI suggestions, then publish."
-                : "Create a mini-course in any subject. Order lessons into your personal learning path. Your courses stay private."}
+              Design learning in any subject. Choose activities, review AI
+              suggestions, then publish.
             </p>
           </>
         )}
@@ -63,16 +58,20 @@ export function CourseStudio(options: StudioOptions) {
           </p>
         )}
         {!account ? (
-          <Link href="/login" className={primary}>
+          <Link href="/login?next=/my-courses" className={primary}>
             Sign in to continue
           </Link>
         ) : teacher && !account.isTeacher ? (
           <p role="alert">
-            Instructor access required. An administrator must assign your role.{" "}
+            Instructor access required.{" "}
+            <Link className="underline" href="/onboarding?intent=teach">
+              Start Teaching
+            </Link>{" "}
+            on this account, or{" "}
             <Link className="underline" href="/my-courses">
-              Create a private course instead
-            </Link>
-            .
+              create a private learning path
+            </Link>{" "}
+            instead.
           </p>
         ) : (
           <>
@@ -94,7 +93,7 @@ export function CourseStudio(options: StudioOptions) {
                 >
                   Join invited courses
                 </button>
-                <Link className={secondary} href="/#courses">
+                <Link className={secondary} href="/courses">
                   Browse available courses
                 </Link>
                 {(["software", "english"] as const).map((subject) => (

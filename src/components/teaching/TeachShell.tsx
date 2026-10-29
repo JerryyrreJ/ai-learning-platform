@@ -122,10 +122,10 @@ export function TeachShell({ children }: { children: React.ReactNode }) {
           </p>
           <div className="ml-auto flex items-center gap-2 sm:gap-3">
             <Link
-              href="/"
+              href="/dashboard"
               className="hidden rounded-lg border border-stone-300 bg-white px-3 py-1.5 text-sm font-medium text-stone-700 transition hover:bg-stone-50 sm:inline-flex"
             >
-              View as learner
+              My Learning
             </Link>
             <details className="relative">
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-1.5 py-1 transition hover:bg-stone-100 [&::-webkit-details-marker]:hidden">
@@ -144,10 +144,16 @@ export function TeachShell({ children }: { children: React.ReactNode }) {
                   {user?.email}
                 </p>
                 <Link
-                  href="/"
+                  href="/dashboard"
                   className="block rounded-md px-3 py-2 text-sm text-stone-700 hover:bg-stone-100 sm:hidden"
                 >
-                  View as learner
+                  My Learning
+                </Link>
+                <Link
+                  href="/courses"
+                  className="block rounded-md px-3 py-2 text-sm text-stone-700 hover:bg-stone-100"
+                >
+                  Browse courses
                 </Link>
                 <button
                   type="button"
