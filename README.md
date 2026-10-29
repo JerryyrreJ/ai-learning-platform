@@ -1,29 +1,32 @@
 # DevPath
 
-**A general-purpose AI learning platform with teacher-designed mini-courses.**
+**AI-Powered Interactive Learning Platform**
 
-Instructors create courses in any subject, organize lessons and activities,
-review AI proposals, publish content, invite students and inspect their work.
-Students explore courses, practise, receive feedback and build private learning
-paths. Harbour Clinic is an immersive project activity inside this platform.
+Learn anything. By doing. Explore interactive courses, create your own learning
+path with AI, and practise through realistic simulations. Instructors create
+courses in any subject, invite students and monitor outcomes on the same account
+type as learners. Harbour Clinic is a featured immersive project activity inside
+this platform — not a separate product.
 
 COMP5241 group project, The Hong Kong Polytechnic University.
+
+See also [docs/UNIFIED_LEARNING_EXPERIENCE.md](docs/UNIFIED_LEARNING_EXPERIENCE.md).
 
 ## Workspaces
 
 | Route | Purpose |
 | --- | --- |
-| `/` | Course catalogue and learner home |
+| `/` | Product introduction and featured content |
+| `/courses` | Full course discovery library |
 | `/courses/[courseId]` | Lessons and course preferences |
 | `/courses/[courseId]/[lessonId]` | Reading, activities, feedback and progress |
-| `/dashboard` | Personal progress |
-| `/my-courses` | Student-created private courses and AI builder |
-| `/onboarding` | Language, goals and learning preferences |
-| `/teach` | Instructor dashboard |
+| `/dashboard` | My Learning — continue, progress and feedback |
+| `/my-courses` | My Creations — private AI learning paths |
+| `/onboarding` | Learn/teach intention, then preferences |
+| `/teach` | Teaching Studio |
 | `/teach/courses/[courseId]` | Overview, curriculum, preview, students and settings |
 | `/teach/students`, `/teach/invitations` | Participation and invitation management |
-| `/projects` | Standalone project practice |
-| `/projects/[scenarioId]` | Full-screen immersive desktop; course launches retain a return link |
+| `/projects/[scenarioId]` | Immersive desktop (kept; not in primary nav) |
 
 The single **Course → Lesson → Activity** model and Activity Registry support
 Reading, Choice, Quiz, Ordering, Response, Conversation, Code Review, declarative
@@ -75,7 +78,8 @@ npm run dev
 
 Without credentials, static courses, local simulations and preferences work.
 For persistent authoring and project runs, configure an **isolated test**
-Supabase instance and apply all eight migrations in filename order.
+Supabase instance and apply all migrations in filename order (including
+`20261029120000_onboarding_and_instructor_activation.sql`).
 
 | Variable | Purpose |
 | --- | --- |
@@ -86,9 +90,11 @@ Supabase instance and apply all eight migrations in filename order.
 
 Enable GitHub OAuth and/or magic links in the test instance. Allow the local
 `http://localhost:3000/auth/callback` redirect, including its `next` query
-parameter, in your Auth configuration. Assign test instructors through an
-administrator's SQL console; browser users cannot assign their own roles.
-Keep service and AI keys out of `NEXT_PUBLIC_` variables.
+parameter, in your Auth configuration. For magic-link confirm flows also allow
+`/auth/confirm`. Verified users can self-activate instructor access through
+onboarding or **Start Teaching**; direct client updates to `profiles.role` remain
+blocked and never grant `admin`. Keep service and AI keys out of `NEXT_PUBLIC_`
+variables.
 
 ## Checks
 
