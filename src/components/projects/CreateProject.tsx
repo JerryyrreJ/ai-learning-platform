@@ -20,6 +20,30 @@ const SUBJECTS = [
   "Software Engineering",
 ];
 
+const BACKGROUNDS = [
+  "Nursing student",
+  "Business & finance major",
+  "Law & policy student",
+  "Chemistry / lab science",
+  "Journalism & media",
+  "Hospitality & design",
+  "CS undergraduate",
+];
+
+const REMIX_TWISTS = [
+  "Set in a busy hospital ward",
+  "Set on a university campus",
+  "Adapt for retail & e-commerce",
+  "Set in a public museum or NGO",
+];
+
+const TOPIC_IDEAS = [
+  "Auditing ward infection rates",
+  "Launching a café loyalty pass",
+  "Reviewing a daycare fee policy",
+  "Validating a river water lab SOP",
+];
+
 // What the learner sees while the AI works; a generation takes about a minute.
 const STAGES = [
   { after: 0, text: "Designing the stakeholder, hidden constraints, and domain concepts…" },
@@ -146,7 +170,7 @@ export function CreateProject({
         <p className="text-sm font-medium text-emerald-300">Verified & ready to learn</p>
         <h2 className="mt-2 text-2xl font-semibold">{created.title}</h2>
         <p className="mt-3 text-white/65">
-          Passed every automated playability check: start with the 3-minute AI-narrated visual primer and Spot-the-Trap game, or jump straight onto the simulated desktop.
+          Passed every automated playability check: start with the 3-minute interactive visual primer and Spot-the-Trap game, or jump straight onto the click-first simulated desktop.
         </p>
         <div className="mt-7 flex flex-wrap gap-3">
           <Link href={`/projects/${created.id}/learn`} className="inline-flex rounded-full bg-white px-7 py-3 text-[15px] font-medium text-black hover:bg-white/85">
@@ -229,13 +253,25 @@ export function CreateProject({
 
         <div>
           <label htmlFor="project-background" className="font-semibold">About you</label>
-          <p className="mt-1 text-sm text-white/50">Your major, profession, or background. Analogies and scenarios adapt to your world.</p>
+          <p className="mt-1 text-sm text-white/50">Click a background below (or type your own)—analogies and scenarios adapt to your world.</p>
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            {BACKGROUNDS.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setBackground(background === item ? "" : item)}
+                className={chip(background === item)}
+              >
+                {item}
+              </button>
+            ))}
+          </div>
           <input
             id="project-background"
             value={background}
             onChange={(event) => setBackground(event.target.value)}
             maxLength={160}
-            placeholder="e.g., second-year nursing student, hospitality major, journalism undergrad"
+            placeholder="Or type your own major / profession…"
             className={input}
           />
         </div>
@@ -246,14 +282,26 @@ export function CreateProject({
               How should we remix it? <span className="font-normal text-white/45">(optional)</span>
             </label>
             <p className="mt-1 text-sm text-white/50">
-              Change the industry, setting, or twist—or leave blank to adapt it automatically to your background above.
+              Pick a twist with one click—or leave blank to adapt it automatically to your background above.
             </p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {REMIX_TWISTS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setInstructions(instructions === item ? "" : item)}
+                  className={chip(instructions === item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
             <input
               id="remix-instructions"
               value={instructions}
               onChange={(event) => setInstructions(event.target.value)}
               maxLength={800}
-              placeholder="e.g., Set it in a university museum archive or a retail pharmacy inventory audit"
+              placeholder="Or describe a custom setting / twist…"
               className={input}
             />
           </div>
@@ -304,9 +352,21 @@ export function CreateProject({
             </label>
             <p className="mt-1 text-sm text-white/50">
               {subject.trim()
-                ? `Leave blank and the AI invents a realistic job in your world where ${subject.trim().toLowerCase()} decides the outcome.`
-                : "One line about the client and what they ask for."}
+                ? `Leave blank and the AI invents a realistic job in your world where ${subject.trim().toLowerCase()} decides the outcome—or pick an idea:`
+                : "Pick a mission idea with one click, or write one line about the client:"}
             </p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              {TOPIC_IDEAS.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setTopic(topic === item ? "" : item)}
+                  className={chip(topic === item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
             <input
               id="project-topic"
               value={topic}
@@ -314,7 +374,7 @@ export function CreateProject({
               maxLength={200}
               required={!subject.trim()}
               minLength={4}
-              placeholder="e.g., auditing hospital infection numbers, launching a café loyalty pass, validating a water assay"
+              placeholder="Or type your own mission topic…"
               className={input}
             />
           </div>

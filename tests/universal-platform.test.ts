@@ -14,12 +14,17 @@ import {
   askClient,
   chooseAction,
   endInterview,
+  memoOf,
   projectView,
   requestChanges,
+  sendBack,
   startProject,
   submitBrief,
   submitRequirements,
+  type ProjectStep,
 } from "../src/lib/projects/runtime";
+import { itemCoveredBy } from "../src/lib/projects/composer";
+import type { SimulationHistory } from "../src/lib/learning/simulation/engine";
 import { wardGelAuditDraft } from "../src/lib/projects/ward-gel-audit";
 
 test("polymorphic specialist artifacts label rows, clauses, and steps without code jargon", async () => {
@@ -210,4 +215,112 @@ test("public community gallery migration exposes safe listing columns when share
     asRole("anon", null, "select draft from public.generated_projects where id = 'gen-gallerytest01'"),
     /permission denied/,
   );
+});
+
+test("mini-course studio has zero dependency on browser Web Speech APIs", () => {
+  const studioSource = readFileSync("src/components/projects/minicourse/MiniCourseStudio.tsx", "utf8");
+  const modelSource = readFileSync("src/lib/projects/minicourse.ts", "utf8");
+  for (const forbidden of ["speechSynthesis", "SpeechSynthesisUtterance", "SpeechRecognition", "webkitSpeechRecognition"]) {
+    assert.equal(studioSource.includes(forbidden), false, `MiniCourseStudio must not use ${forbidden}`);
+    assert.equal(modelSource.includes(forbidden), false, `minicourse.ts must not use ${forbidden}`);
+  }
+});
+
+test("every built-in course is 100% playable end-to-end with zero typing using click-first cards while preserving trap consequences", async () => {
+  for (const listing of projectListings) {
+    const scenario = getProjectScenario(listing.id)!;
+    const history: SimulationHistory = [];
+    const take = (step: ProjectStep) => {
+      history.push(...step.events);
+      return step.state;
+    };
+
+    let state = startProject(scenario);
+    state = take(chooseAction(scenario, state, "pick-product"));
+    state = take(chooseAction(scenario, state, "call-grace"));
+
+    // 1. Interview: 8 suggested clickable questions (6 real + 2 distractors).
+    const initialSuggestions = projectView(scenario, state, history).interview.suggestedQuestions;
+    assert.equal(initialSuggestions.length, 8, `${listing.id} should offer 6 real + 2 distractor questions`);
+    let distractorCount = 0;
+    for (const q of initialSuggestions) {
+      const res = await askClient(scenario, state, q, offlineEvaluator);
+      if (res.revealed.length === 0) distractorCount++;
+      state = res.state;
+      // Asked question is immediately filtered out of remaining suggestions.
+      assert.equal(projectView(scenario, state, history).interview.suggestedQuestions.includes(q), false);
+    }
+    assert.equal(distractorCount, 2, `${listing.id} should include 2 distractor questions that reveal no fact`);
+    assert.equal(memoOf(state).interview.revealed.length, 6, `${listing.id} clickable questions must uncover all 6 facts`);
+    state = take(endInterview(scenario, state));
+
+    // 2. Requirements: 4 paired decision slots, zero typing.
+    const reqView = projectView(scenario, state, history);
+    assert.ok(reqView.requirementsComposer && reqView.requirementsComposer.length === 4);
+    const rigorousReqText = reqView.requirementsComposer
+      .map((slot) => {
+        // Pick the option that covers at least one scenario requirement item.
+        const rigorous = slot.options.find((opt) => scenario.requirements.some((item) => itemCoveredBy(opt.text, item)));
+        const trap = slot.options.find((opt) => scenario.requirements.every((item) => !itemCoveredBy(opt.text, item)));
+        assert.ok(rigorous, `${listing.id} ${slot.id} must have a rigorous option`);
+        assert.ok(trap, `${listing.id} ${slot.id} must have a genuine trap option`);
+        return rigorous.text;
+      })
+      .join(" ");
+    state = take(await submitRequirements(scenario, state, rigorousReqText, offlineEvaluator));
+    assert.equal(state.variables.hasMetric, true, `${listing.id} rigorous requirements cards set hasMetric`);
+
+    // 3. Brief: verify picking a trap card in slot 1 triggers the problem flaw, while all-rigorous yields good.
+    const briefView = projectView(scenario, state, history);
+    assert.ok(briefView.briefComposer && briefView.briefComposer.length >= 3);
+    const slotChoices = briefView.briefComposer.map((slot) => {
+      const rigorous = slot.options.find((opt) => scenario.brief.some((item) => itemCoveredBy(opt.text, item)));
+      const trap = slot.options.find((opt) => scenario.brief.every((item) => !itemCoveredBy(opt.text, item)));
+      assert.ok(rigorous, `${listing.id} ${slot.id} must have a rigorous directive`);
+      assert.ok(trap, `${listing.id} ${slot.id} must have a trap directive`);
+      return { rigorous: rigorous.text, trap: trap.text };
+    });
+
+    // Branch check: picking trap in slot-1 (missing C1) + rigorous in slots 2 & 3 produces the problem-flawed deliverable!
+    const flawedBriefText = [slotChoices[0]!.trap, ...slotChoices.slice(1).map((s) => s.rigorous)].join(" ");
+    let flawedState = (await submitBrief(scenario, state, flawedBriefText, offlineEvaluator)).state;
+    assert.notEqual(flawedState.variables.variant, "good", `${listing.id} trap brief card must produce a flawed variant`);
+
+    // 4. Review: catch the flaw using clickable diagnosis card from work.noteOptions!
+    const reviewView = projectView(scenario, flawedState, history);
+    assert.equal(reviewView.work?.noteOptions.length, 4, `${listing.id} should offer 4 clickable diagnosis notes`);
+    const currentVariant = scenario.variants.find((v) => v.id === flawedState.variables.variant)!;
+    // Try each note option on fresh copies to verify at least one clickable card earns "strong" concept grading.
+    const strongFixed = await Promise.all(
+      reviewView.work!.noteOptions.map((opt) =>
+        sendBack(scenario, flawedState, { reasonId: currentVariant.problemReason, explanation: opt.text }, offlineEvaluator),
+      ),
+    );
+    const bestFix = strongFixed.find((step) => projectView(scenario, step.state, history).work?.reviews[0]?.explained?.rating === "strong");
+    assert.ok(bestFix, `${listing.id} must have a clickable diagnosis card earning strong teach-back rating`);
+    flawedState = bestFix.state;
+    assert.equal(flawedState.variables.variant, "good");
+
+    // 5. Perfect brief + Viva clickable defense cards -> 10/10 success!
+    state = take(await submitBrief(scenario, state, slotChoices.map((s) => s.rigorous).join(" "), offlineEvaluator));
+    assert.equal(state.variables.variant, "good");
+    state = take(chooseAction(scenario, state, "approve"));
+
+    const releaseView = projectView(scenario, state, history);
+    assert.equal(releaseView.viva?.options.length, 4, `${listing.id} should offer 4 clickable Viva response cards`);
+    const vivaRatings = await Promise.all(
+      releaseView.viva!.options.map(async (opt) => {
+        const res = await answerViva(scenario, state, opt.text, offlineEvaluator);
+        return { step: res, rating: projectView(scenario, res.state, history).viva?.response?.rating };
+      }),
+    );
+    assert.ok(vivaRatings.some((r) => r.rating === "strong"), `${listing.id} Viva cards must include a strong defense`);
+    assert.ok(vivaRatings.some((r) => r.rating === "weak"), `${listing.id} Viva cards must include a weak trap`);
+
+    const strongViva = vivaRatings.find((r) => r.rating === "strong")!;
+    state = strongViva.step.state;
+    state = take(chooseAction(scenario, state, "release-measure"));
+    assert.equal(state.outcome, "success");
+    assert.equal(state.variables.trust, 10);
+  }
 });

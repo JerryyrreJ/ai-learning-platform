@@ -21,6 +21,8 @@ export type ProjectFact = {
   cues: string[];
   /** What the client says when the fact comes up, in their own voice. */
   reply: string;
+  /** Natural one-click question prompt shown in the call UI without revealing the answer. */
+  question?: string;
 };
 
 /**

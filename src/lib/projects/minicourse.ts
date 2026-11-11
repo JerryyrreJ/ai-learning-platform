@@ -5,7 +5,7 @@ import type { ArtifactKind, ProjectConcept, ProjectScenario } from "./types";
  *
  * Turns ANY ProjectScenario (built-in, instructor-customised, or student-generated
  * in any academic discipline) into a browser-safe interactive pre-simulation warm-up:
- *   Act 1: AI-Narrated Animated Visual Primer Slides
+ *   Act 1: Interactive Animated Visual Primer Cards
  *   Act 2: 60s "Spot-the-Trap" Rapid Judgment Mini-Game
  *   Act 3: Handoff into the Live Desktop Simulation + Sign-Off Viva
  *
@@ -21,8 +21,6 @@ export interface PrimerSlide {
   title: string;
   body: string;
   diagram: DiagramKind;
-  /** Spoken script read aloud when the learner turns on AI Voice Narration. */
-  narration: string;
   /** Optional side-by-side callouts (e.g. Analogy vs Common Trap). */
   callouts?: {
     goodLabel: string;
@@ -137,7 +135,6 @@ export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
       title: scenario.title,
       body: `${scenario.summary} You can review ${scenario.assistant.name}'s work in Overview mode or inspect the ${ARTIFACT_LABEL[artifactKind]} entry by entry.`,
       diagram: "cast",
-      narration: `Welcome to ${scenario.title}. You are working with ${scenario.client.name} at ${scenario.client.organisation}, alongside ${scenario.assistant.name}, an ${scenario.assistant.kind}. Before you step onto the simulated desktop, let's unpack the two core concepts this job turns on.`,
       callouts: {
         goodLabel: "Your Stakeholder",
         goodText: `${scenario.client.name} (${scenario.client.role}, ${scenario.client.organisation}) knows the real-world context—ask open questions before promising a solution.`,
@@ -156,7 +153,6 @@ export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
       title: concept.name,
       body: concept.explanation,
       diagram,
-      narration: `Concept ${num}: ${concept.name}. ${concept.explanation}`,
       watchFor: concept.inTheJob,
     });
     slides.push({
@@ -165,7 +161,6 @@ export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
       title: `Spotting ${concept.name.toLowerCase()} in the wild`,
       body: `Fast AI drafts often sound persuasive even when built on a textbook misconception. Compare the everyday mental model against the trap ${scenario.assistant.name} can fall into.`,
       diagram,
-      narration: `Here is a quick way to picture ${concept.name}. ${concept.bridge} Watch out for the classic misconception: ${concept.misconception} In your upcoming mission: ${concept.inTheJob}`,
       callouts: {
         goodLabel: "Everyday Analogy",
         goodText: concept.bridge,
@@ -182,7 +177,6 @@ export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
     title: `How to lead ${scenario.assistant.name} on ${deliverable}`,
     body: "Your simulation run is evaluated on four AI Fluency habits—from deciding when NOT to delegate yet, all the way to defending your choices in a live stakeholder Viva before sign-off.",
     diagram: "fluency",
-    narration: `When you enter the desktop, remember the four AI fluency habits. First, Delegation: interview ${scenario.client.name} before handing work to ${scenario.assistant.name}. Second, Description: put measurable targets and guardrails in your brief. Third, Discernment: audit ${deliverable} and send flawed versions back with the real reason. Fourth, Diligence: defend your plan in the live sign-off check and measure results after launch.`,
     callouts: {
       goodLabel: "Before & During Build",
       goodText: "1. Interview the client first (Delegation) · 2. State measurable targets & guardrails in your brief (Description).",

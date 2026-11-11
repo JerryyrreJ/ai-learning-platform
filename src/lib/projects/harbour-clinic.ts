@@ -147,6 +147,7 @@ export const harbourClinic: ProjectScenario = {
       id: "F1",
       text: "Double bookings happen when Mandy and Kit edit the shared spreadsheet at the same time, mostly between 8:30 and 9:30.",
       cues: ["happen", "wrong", "double", "same time", "same slot", "spreadsheet", "morning", "rush", "busy", "cause", "why", "reception", "mandy", "kit"],
+      question: "When do the double bookings happen in the morning rush, and why?",
       reply:
         "It's always the morning rush, about half eight to half nine. Mandy and Kit both have the spreadsheet open and both type into the same row. Neither of them notices until two patients turn up.",
     },
@@ -154,6 +155,7 @@ export const harbourClinic: ProjectScenario = {
       id: "F2",
       text: "Cancelled appointments must stay on record. The clinic keeps appointment history for seven years.",
       cues: ["cancel", "record", "history", "delete", "rule", "regulation", "audit", "keep", "data"],
+      question: "What happens to an appointment record and history when someone cancels?",
       reply:
         "Oh, cancellations must stay on file. We keep the appointment history for seven years, the auditors check it. Right now we just colour the row grey.",
     },
@@ -161,6 +163,7 @@ export const harbourClinic: ProjectScenario = {
       id: "F3",
       text: "Patients book by phone. No patient app has been approved, and the budget is about two weeks of work.",
       cues: ["patient", "app", "who will use", "user", "budget", "cost", "money", "online", "phone", "scope"],
+      question: "Who will use this tool, how do patients book by phone, and what's the budget?",
       reply:
         "Honestly, most of our patients just ring us. The board hasn't approved any patient app. Leo said you can give us about two weeks, and that's what we can pay for.",
     },
@@ -168,6 +171,7 @@ export const harbourClinic: ProjectScenario = {
       id: "F4",
       text: "Each slot is 15 minutes. Dr Chan only works Tuesday and Thursday mornings.",
       cues: ["slot", "length", "minutes", "doctor", "schedule", "hours", "shift", "long is"],
+      question: "How long is each appointment slot in minutes, and what is each doctor's schedule?",
       reply:
         "Every appointment is fifteen minutes. Dr Lee is in every day, Dr Chan only Tuesday and Thursday mornings.",
     },
@@ -175,6 +179,7 @@ export const harbourClinic: ProjectScenario = {
       id: "F5",
       text: "Reception uses one old shared PC with Chrome. Nothing can be installed on it.",
       cues: ["computer", "pc", "device", "laptop", "browser", "install", "equipment", "tablet", "hardware"],
+      question: "What computer and browser equipment does reception have at the front desk?",
       reply:
         "We've got one old PC at the front desk, the clinic's IT won't let us install anything. Chrome works, that's about it.",
     },
@@ -182,6 +187,7 @@ export const harbourClinic: ProjectScenario = {
       id: "F6",
       text: "For Grace, success means fewer than one double booking per week.",
       cues: ["success", "measure", "fixed", "goal", "good", "better", "how will you know", "target", "result"],
+      question: "How will you know it's fixed—what target would measure success?",
       reply:
         "If we got it down to less than one double booking a week, I'd be thrilled. Right now it's three or four.",
     },

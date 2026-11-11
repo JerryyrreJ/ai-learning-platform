@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { glass } from "@/components/home/glass";
 import type { DiagramKind, MiniCourse } from "@/lib/projects/minicourse";
 import { play, unlockSound } from "@/lib/sound";
@@ -13,7 +13,46 @@ const ARTIFACT_BADGE: Record<MiniCourse["artifactKind"], string> = {
   steps: "Lab / Field SOP",
 };
 
+type LensMode = "both" | "trap" | "sound";
+
+function LensSwitcher({ lens, onChange }: { lens: LensMode; onChange: (next: LensMode) => void }) {
+  const items: [LensMode, string][] = [
+    ["both", "⇄ Compare Both"],
+    ["trap", "⚠ Naive Trap"],
+    ["sound", "✓ Calibrated Fix"],
+  ];
+  return (
+    <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Interactive diagram lens">
+      {items.map(([id, label]) => {
+        const active = lens === id;
+        return (
+          <button
+            key={id}
+            type="button"
+            onClick={() => {
+              unlockSound();
+              play("open");
+              onChange(id);
+            }}
+            className={`rounded-full border px-2.5 py-1 text-[11px] font-medium transition ${
+              active
+                ? "border-cyan-300 bg-cyan-300/20 text-cyan-100"
+                : "border-white/15 bg-white/[0.04] text-white/65 hover:border-white/35 hover:text-white"
+            }`}
+          >
+            {label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 function ConceptDiagram({ kind, course, stepIndex }: { kind: DiagramKind; course: MiniCourse; stepIndex: number }) {
+  const [lens, setLens] = useState<LensMode>("both");
+  const showTrap = lens !== "sound";
+  const showSound = lens !== "trap";
+
   return (
     <div className="relative overflow-hidden rounded-2xl border border-white/15 bg-gradient-to-br from-slate-950/90 via-indigo-950/60 to-slate-900/90 p-5">
       <div className="pointer-events-none absolute -right-10 -top-10 h-36 w-36 rounded-full bg-cyan-400/10 blur-2xl" />
@@ -41,111 +80,129 @@ function ConceptDiagram({ kind, course, stepIndex }: { kind: DiagramKind; course
 
       {kind === "denominator" && (
         <div className="relative space-y-3">
-          <div className="flex items-center justify-between text-xs text-white/60">
-            <span className="font-mono uppercase tracking-wider text-cyan-200/90">Scale & Baseline Lens</span>
-            <span>Numerator ÷ True Exposure / Blank</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/60">
+            <span className="font-mono uppercase tracking-wider text-cyan-200/90">Scale & Baseline Simulator</span>
+            <LensSwitcher lens={lens} onChange={setLens} />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-rose-300/20 bg-black/35 p-3.5">
-              <p className="text-xs font-medium text-rose-200">Surface Reading (Unadjusted)</p>
-              <div className="mt-2.5 flex items-end gap-3">
-                <div className="w-12 rounded-t bg-rose-400/50 transition-all duration-700" style={{ height: stepIndex % 2 === 0 ? 48 : 40 }} />
-                <div className="w-12 rounded-t bg-emerald-400/50 transition-all duration-700" style={{ height: 28 }} />
-                <p className="text-xs text-white/65">Looks smaller at a glance when exposure or baseline shifts unseen.</p>
+          <div className={`grid gap-3 ${lens === "both" ? "sm:grid-cols-2" : "grid-cols-1"}`}>
+            {showTrap && (
+              <div className="rounded-xl border border-rose-300/25 bg-black/35 p-3.5 transition-all">
+                <p className="text-xs font-medium text-rose-200">Surface Reading (Unadjusted Raw Count)</p>
+                <div className="mt-2.5 flex items-end gap-3">
+                  <div className="w-12 rounded-t bg-rose-400/55 transition-all duration-500" style={{ height: stepIndex % 2 === 0 ? 50 : 42 }} />
+                  <div className="w-12 rounded-t bg-emerald-400/50 transition-all duration-500" style={{ height: 28 }} />
+                  <p className="text-xs text-white/70">Looks smaller at a glance when exposure or baseline shifts unseen.</p>
+                </div>
               </div>
-            </div>
-            <div className="rounded-xl border border-teal-300/25 bg-teal-400/[0.07] p-3.5">
-              <p className="text-xs font-medium text-teal-200">Calibrated Rate / True Blank</p>
-              <div className="mt-2.5 flex items-end gap-3">
-                <div className="w-12 rounded-t bg-teal-300/55 transition-all duration-700" style={{ height: 26 }} />
-                <div className="w-12 rounded-t bg-amber-300/75 transition-all duration-700" style={{ height: 46 }} />
-                <p className="text-xs text-white/75">Dividing by true exposure or zeroing on a clean blank reveals reality.</p>
+            )}
+            {showSound && (
+              <div className="rounded-xl border border-teal-300/30 bg-teal-400/[0.08] p-3.5 transition-all">
+                <p className="text-xs font-medium text-teal-200">Calibrated Rate / True Blank</p>
+                <div className="mt-2.5 flex items-end gap-3">
+                  <div className="w-12 rounded-t bg-teal-300/55 transition-all duration-500" style={{ height: 26 }} />
+                  <div className="w-12 rounded-t bg-amber-300/80 transition-all duration-500" style={{ height: 48 }} />
+                  <p className="text-xs text-white/80">Dividing by true exposure or zeroing on a clean blank exposes the real direction.</p>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
       {kind === "timeline" && (
         <div className="relative space-y-3">
-          <div className="flex items-center justify-between text-xs text-white/60">
-            <span className="font-mono uppercase tracking-wider text-cyan-200/90">Timing & Flow Integrity</span>
-            <span>Peak Load · Retries · Holding Window</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/60">
+            <span className="font-mono uppercase tracking-wider text-cyan-200/90">Timing & Flow Simulator</span>
+            <LensSwitcher lens={lens} onChange={setLens} />
           </div>
           <div className="space-y-2.5 rounded-xl border border-white/10 bg-black/35 p-3.5">
-            <div className="flex items-center gap-2 text-xs">
-              <span className="w-24 shrink-0 text-rose-200">Unguarded</span>
-              <div className="flex flex-1 items-center gap-1.5">
-                <span className="h-2.5 w-1/3 animate-pulse rounded-full bg-rose-400/70" />
-                <span className="h-2.5 w-1/3 animate-pulse rounded-full bg-amber-400/70" />
-                <span className="rounded bg-rose-500/25 px-2 py-0.5 text-[11px] text-rose-200">Collision / Delay / Decay</span>
+            {showTrap && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="w-24 shrink-0 font-medium text-rose-200">Unguarded</span>
+                <div className="flex flex-1 items-center gap-1.5">
+                  <span className="h-2.5 w-1/3 animate-pulse rounded-full bg-rose-400/75" />
+                  <span className="h-2.5 w-1/3 animate-pulse rounded-full bg-amber-400/75" />
+                  <span className="rounded bg-rose-500/25 px-2 py-0.5 text-[11px] text-rose-200">Collision · Delay · Decay</span>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="w-24 shrink-0 text-emerald-200">Controlled</span>
-              <div className="flex flex-1 items-center gap-1.5">
-                <span className="h-2.5 w-1/4 rounded-full bg-emerald-400/80" />
-                <span className="h-2.5 w-1/4 rounded-full bg-cyan-400/80" />
-                <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] text-emerald-200">Atomic · Fast · Preserved</span>
+            )}
+            {showSound && (
+              <div className="flex items-center gap-2 text-xs">
+                <span className="w-24 shrink-0 font-medium text-emerald-200">Controlled</span>
+                <div className="flex flex-1 items-center gap-1.5">
+                  <span className="h-2.5 w-1/4 rounded-full bg-emerald-400/85" />
+                  <span className="h-2.5 w-1/4 rounded-full bg-cyan-400/85" />
+                  <span className="rounded bg-emerald-500/20 px-2 py-0.5 text-[11px] text-emerald-200">Atomic · Fast · Preserved</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       )}
 
       {kind === "stratify" && (
         <div className="relative space-y-3">
-          <div className="flex items-center justify-between text-xs text-white/60">
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/60">
             <span className="font-mono uppercase tracking-wider text-cyan-200/90">Cohort & Baseline Separation</span>
-            <span>Don&apos;t blend distinct groups</span>
+            <LensSwitcher lens={lens} onChange={setLens} />
           </div>
-          <div className="grid items-center gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-white/10 bg-black/35 p-3 text-center">
-              <p className="text-xs text-white/55">Pooled Mix</p>
-              <div className="mt-2 flex justify-center gap-1.5">
-                <span className="h-3 w-3 rounded-full bg-cyan-300" />
-                <span className="h-3 w-3 rounded-full bg-fuchsia-400" />
-                <span className="h-3 w-3 rounded-full bg-cyan-300" />
-                <span className="h-3 w-3 rounded-full bg-fuchsia-400" />
+          <div className={`grid items-center gap-3 ${lens === "trap" ? "grid-cols-1" : lens === "sound" ? "sm:grid-cols-2" : "sm:grid-cols-3"}`}>
+            {showTrap && (
+              <div className="rounded-xl border border-amber-300/20 bg-black/35 p-3 text-center">
+                <p className="text-xs text-amber-200">Pooled Mix (Blended)</p>
+                <div className="mt-2 flex justify-center gap-1.5">
+                  <span className="h-3 w-3 rounded-full bg-cyan-300" />
+                  <span className="h-3 w-3 rounded-full bg-fuchsia-400" />
+                  <span className="h-3 w-3 rounded-full bg-cyan-300" />
+                  <span className="h-3 w-3 rounded-full bg-fuchsia-400" />
+                </div>
+                <p className="mt-1.5 text-[11px] text-amber-200/85">Confounder hides true trend</p>
               </div>
-              <p className="mt-1.5 text-[11px] text-amber-200/80">Signal masked</p>
-            </div>
-            <div className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.07] p-3 text-center">
-              <p className="text-xs text-cyan-200">Baseline Group A</p>
-              <div className="mt-2 flex justify-center gap-1.5">
-                <span className="h-3 w-3 rounded-full bg-cyan-300" />
-                <span className="h-3 w-3 rounded-full bg-cyan-300" />
-                <span className="h-3 w-3 rounded-full bg-cyan-300" />
-              </div>
-              <p className="mt-1.5 text-[11px] text-white/70">Checked intact</p>
-            </div>
-            <div className="rounded-xl border border-fuchsia-300/25 bg-fuchsia-400/[0.07] p-3 text-center">
-              <p className="text-xs text-fuchsia-200">High-Risk / Edge Group B</p>
-              <div className="mt-2 flex justify-center gap-1.5">
-                <span className="h-3 w-3 rounded-full bg-fuchsia-400" />
-                <span className="h-3 w-3 rounded-full bg-fuchsia-400" />
-              </div>
-              <p className="mt-1.5 text-[11px] text-white/70">Tracked separately</p>
-            </div>
+            )}
+            {showSound && (
+              <>
+                <div className="rounded-xl border border-cyan-300/25 bg-cyan-400/[0.07] p-3 text-center">
+                  <p className="text-xs text-cyan-200">Baseline Group A</p>
+                  <div className="mt-2 flex justify-center gap-1.5">
+                    <span className="h-3 w-3 rounded-full bg-cyan-300" />
+                    <span className="h-3 w-3 rounded-full bg-cyan-300" />
+                    <span className="h-3 w-3 rounded-full bg-cyan-300" />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-white/75">Checked intact</p>
+                </div>
+                <div className="rounded-xl border border-fuchsia-300/25 bg-fuchsia-400/[0.07] p-3 text-center">
+                  <p className="text-xs text-fuchsia-200">High-Risk / Edge Group B</p>
+                  <div className="mt-2 flex justify-center gap-1.5">
+                    <span className="h-3 w-3 rounded-full bg-fuchsia-400" />
+                    <span className="h-3 w-3 rounded-full bg-fuchsia-400" />
+                  </div>
+                  <p className="mt-1.5 text-[11px] text-white/75">Tracked separately</p>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}
 
       {kind === "guardrail" && (
         <div className="relative space-y-3">
-          <div className="flex items-center justify-between text-xs text-white/60">
-            <span className="font-mono uppercase tracking-wider text-cyan-200/90">Explicit Guardrail Check</span>
-            <span>Rules AI agents skip unless told</span>
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white/60">
+            <span className="font-mono uppercase tracking-wider text-cyan-200/90">Explicit Guardrail Simulator</span>
+            <LensSwitcher lens={lens} onChange={setLens} />
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-rose-300/20 bg-rose-400/[0.06] p-3">
-              <p className="text-xs font-semibold text-rose-200">Shortcut Default</p>
-              <p className="mt-1 text-xs text-white/65">Optimises convenience while quietly crossing privacy, security, or behavioural norms.</p>
-            </div>
-            <div className="rounded-xl border border-emerald-300/25 bg-emerald-400/[0.07] p-3">
-              <p className="text-xs font-semibold text-emerald-200">Explicit Boundary</p>
-              <p className="mt-1 text-xs text-white/75">Written directly into requirements & brief, then verified in the delivered artifact.</p>
-            </div>
+          <div className={`grid gap-3 ${lens === "both" ? "sm:grid-cols-2" : "grid-cols-1"}`}>
+            {showTrap && (
+              <div className="rounded-xl border border-rose-300/25 bg-rose-400/[0.07] p-3">
+                <p className="text-xs font-semibold text-rose-200">Shortcut Default</p>
+                <p className="mt-1 text-xs text-white/70">Optimises convenience while quietly crossing privacy, compliance, or behavioural norms.</p>
+              </div>
+            )}
+            {showSound && (
+              <div className="rounded-xl border border-emerald-300/30 bg-emerald-400/[0.08] p-3">
+                <p className="text-xs font-semibold text-emerald-200">Explicit Boundary</p>
+                <p className="mt-1 text-xs text-white/80">Selected directly in requirements & brief, then verified in the delivered artifact.</p>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -154,8 +211,8 @@ function ConceptDiagram({ kind, course, stepIndex }: { kind: DiagramKind; course
         <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {[
             ["01 Delegation", "Interview before briefing"],
-            ["02 Description", "State targets & guardrails"],
-            ["03 Discernment", "Catch & explain AI flaws"],
+            ["02 Description", "Select targets & guardrails"],
+            ["03 Discernment", "Audit & diagnose AI flaws"],
             ["04 Diligence", "Pass Viva & measure launch"],
           ].map(([label, desc]) => (
             <div key={label} className="rounded-xl border border-white/15 bg-white/[0.05] p-3">
@@ -181,14 +238,6 @@ export function MiniCourseStudio({
   const [act, setAct] = useState<"primer" | "game" | "ready">("primer");
   const [slideIdx, setSlideIdx] = useState(0);
 
-  // Voice narrator state (Web Speech API)
-  const [speechSupported, setSpeechSupported] = useState(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [rate, setRate] = useState<1 | 1.25>(1);
-  const [autoAdvance, setAutoAdvance] = useState(false);
-  const autoAdvanceRef = useRef(autoAdvance);
-  autoAdvanceRef.current = autoAdvance;
-
   // Mini-game state
   const [cardIdx, setCardIdx] = useState(0);
   const [picked, setPicked] = useState<"sound" | "trap" | null>(null);
@@ -196,77 +245,32 @@ export function MiniCourseStudio({
   const [streak, setStreak] = useState(0);
   const [bestStreak, setBestStreak] = useState(0);
 
-  useEffect(() => {
-    setSpeechSupported(typeof window !== "undefined" && "speechSynthesis" in window && typeof window.SpeechSynthesisUtterance !== "undefined");
-    return () => {
-      if (typeof window !== "undefined" && "speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-    };
-  }, []);
-
-  const stopSpeech = useCallback(() => {
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
-    setSpeaking(false);
-  }, []);
-
-  const speakSlide = useCallback(
-    (index: number, speechRate: 1 | 1.25 = rate) => {
-      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-      const target = course.slides[index];
-      if (!target) return;
-      window.speechSynthesis.cancel();
-      const utter = new window.SpeechSynthesisUtterance(target.narration);
-      utter.rate = speechRate;
-      utter.onstart = () => setSpeaking(true);
-      utter.onend = () => {
-        setSpeaking(false);
-        if (autoAdvanceRef.current && index < course.slides.length - 1) {
-          setSlideIdx(index + 1);
-        }
-      };
-      utter.onerror = () => setSpeaking(false);
-      setSpeaking(true);
-      window.speechSynthesis.speak(utter);
-    },
-    [course.slides, rate],
-  );
-
-  // When auto-advancing while speaking, read the newly entered slide automatically.
-  useEffect(() => {
-    if (act !== "primer") {
-      stopSpeech();
-      return;
-    }
-    if (autoAdvance && speaking) {
-      speakSlide(slideIdx, rate);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [slideIdx, act]);
-
   const slide = course.slides[slideIdx];
   const card = course.gameCards[cardIdx];
 
-  function chooseVerdict(choice: "sound" | "trap") {
-    if (picked || !card) return;
-    unlockSound();
-    setPicked(choice);
-    const right = choice === card.verdict;
-    if (right) {
-      play("review-right");
-      const nextStreak = streak + 1;
-      setScore((s) => s + 1);
-      setStreak(nextStreak);
-      setBestStreak((b) => Math.max(b, nextStreak));
-    } else {
-      play("review-wrong");
-      setStreak(0);
-    }
-  }
+  const chooseVerdict = useCallback(
+    (choice: "sound" | "trap") => {
+      if (picked || !card) return;
+      unlockSound();
+      setPicked(choice);
+      const right = choice === card.verdict;
+      if (right) {
+        play("review-right");
+        setScore((s) => s + 1);
+        setStreak((prev) => {
+          const next = prev + 1;
+          setBestStreak((b) => Math.max(b, next));
+          return next;
+        });
+      } else {
+        play("review-wrong");
+        setStreak(0);
+      }
+    },
+    [picked, card],
+  );
 
-  function nextGameCard() {
+  const nextGameCard = useCallback(() => {
     unlockSound();
     if (cardIdx < course.gameCards.length - 1) {
       play("open");
@@ -276,7 +280,41 @@ export function MiniCourseStudio({
       play("success");
       setAct("ready");
     }
-  }
+  }, [cardIdx, course.gameCards.length]);
+
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      const target = event.target as HTMLElement | null;
+      if (target && (target.tagName === "INPUT" || target.tagName === "TEXTAREA")) return;
+
+      if (act === "primer") {
+        if (event.key === "ArrowRight") {
+          event.preventDefault();
+          unlockSound();
+          if (slideIdx < course.slides.length - 1) {
+            play("open");
+            setSlideIdx((i) => i + 1);
+          } else {
+            play("fact");
+            setAct("game");
+          }
+        } else if (event.key === "ArrowLeft" && slideIdx > 0) {
+          event.preventDefault();
+          setSlideIdx((i) => Math.max(0, i - 1));
+        }
+      } else if (act === "game") {
+        if (picked === null) {
+          if (event.key === "1") chooseVerdict("sound");
+          if (event.key === "2") chooseVerdict("trap");
+        } else if (event.key === "ArrowRight" || event.key === "Enter") {
+          event.preventDefault();
+          nextGameCard();
+        }
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [act, slideIdx, course.slides.length, picked, chooseVerdict, nextGameCard]);
 
   function restartGame() {
     setCardIdx(0);
@@ -305,7 +343,7 @@ export function MiniCourseStudio({
       <div className="mt-5">
         <div className="flex flex-wrap items-center gap-2 text-xs text-cyan-200/90">
           <span className="rounded-full border border-cyan-300/30 bg-cyan-300/10 px-3 py-0.5 font-medium uppercase tracking-wider">
-            3-Act Interactive Mini-Course
+            3-Act Click-First Mini-Course
           </span>
           <span className="rounded-full border border-white/15 bg-white/5 px-3 py-0.5 text-white/70">
             {course.domain}
@@ -321,9 +359,9 @@ export function MiniCourseStudio({
       {/* 3-Act Switcher */}
       <div className="mt-7 grid gap-2.5 sm:grid-cols-3" role="tablist" aria-label="Mini-course stages">
         {[
-          { id: "primer" as const, step: "Act 01", title: "Visual Primer", sub: `${course.slides.length} narrated cards` },
+          { id: "primer" as const, step: "Act 01", title: "Visual Primer", sub: `${course.slides.length} interactive cards` },
           { id: "game" as const, step: "Act 02", title: "Spot-the-Trap Game", sub: `${course.gameCards.length} rapid judgments` },
-          { id: "ready" as const, step: "Act 03", title: "Simulated Workday", sub: "Client call, Review & Viva" },
+          { id: "ready" as const, step: "Act 03", title: "Simulated Workday", sub: "Zero-typing desktop & Viva" },
         ].map((tab) => {
           const active = act === tab.id;
           return (
@@ -334,7 +372,7 @@ export function MiniCourseStudio({
               aria-selected={active}
               onClick={() => {
                 unlockSound();
-                stopSpeech();
+                play("open");
                 setAct(tab.id);
               }}
               className={`rounded-2xl border p-4 text-left transition ${
@@ -354,7 +392,6 @@ export function MiniCourseStudio({
       {/* ACT 1: VISUAL PRIMER SLIDES */}
       {act === "primer" && slide && (
         <section className={`${glass} mt-6 p-6 sm:p-8`} aria-label="Visual Primer">
-          {/* Progress dots + AI Narration bar */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-white/10 pb-4">
             <div className="flex items-center gap-1.5">
               {course.slides.map((s, idx) => (
@@ -363,7 +400,8 @@ export function MiniCourseStudio({
                   type="button"
                   aria-label={`Slide ${idx + 1}: ${s.title}`}
                   onClick={() => {
-                    stopSpeech();
+                    unlockSound();
+                    play("open");
                     setSlideIdx(idx);
                   }}
                   className={`h-2 rounded-full transition-all ${
@@ -376,42 +414,9 @@ export function MiniCourseStudio({
               </span>
             </div>
 
-            {speechSupported && (
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => (speaking ? stopSpeech() : speakSlide(slideIdx, rate))}
-                  className={`inline-flex items-center gap-2 rounded-full border px-3.5 py-1.5 text-xs font-medium transition ${
-                    speaking
-                      ? "border-cyan-300 bg-cyan-300/20 text-cyan-100"
-                      : "border-white/20 bg-white/[0.06] text-white/85 hover:border-white/45"
-                  }`}
-                >
-                  <span className={`h-2 w-2 rounded-full ${speaking ? "animate-ping bg-cyan-300" : "bg-white/50"}`} />
-                  {speaking ? "Stop narration" : "AI Narrate slide"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    const nextRate = rate === 1 ? 1.25 : 1;
-                    setRate(nextRate);
-                    if (speaking) speakSlide(slideIdx, nextRate);
-                  }}
-                  className="rounded-full border border-white/15 px-2.5 py-1 text-xs font-mono text-white/70 hover:border-white/40"
-                >
-                  {rate}x
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setAutoAdvance((v) => !v)}
-                  className={`rounded-full border px-2.5 py-1 text-xs ${
-                    autoAdvance ? "border-teal-300/50 bg-teal-300/15 text-teal-100" : "border-white/15 text-white/55 hover:border-white/35"
-                  }`}
-                >
-                  Auto-next {autoAdvance ? "on" : "off"}
-                </button>
-              </div>
-            )}
+            <span className="font-mono text-xs text-white/45">
+              Tip: click diagram toggles or press ← / →
+            </span>
           </div>
 
           {/* Slide content */}
@@ -421,7 +426,7 @@ export function MiniCourseStudio({
             <p className="mt-3 text-base leading-relaxed text-white/80">{slide.body}</p>
 
             <div className="mt-5">
-              <ConceptDiagram kind={slide.diagram} course={course} stepIndex={slideIdx} />
+              <ConceptDiagram key={slide.id} kind={slide.diagram} course={course} stepIndex={slideIdx} />
             </div>
 
             {slide.callouts && (
@@ -450,10 +455,7 @@ export function MiniCourseStudio({
             <button
               type="button"
               disabled={slideIdx === 0}
-              onClick={() => {
-                stopSpeech();
-                setSlideIdx((i) => Math.max(0, i - 1));
-              }}
+              onClick={() => setSlideIdx((i) => Math.max(0, i - 1))}
               className="rounded-full border border-white/20 px-5 py-2.5 text-sm font-medium text-white/80 transition hover:border-white/50 disabled:opacity-35"
             >
               ← Previous
@@ -465,7 +467,6 @@ export function MiniCourseStudio({
                 onClick={() => {
                   unlockSound();
                   play("open");
-                  stopSpeech();
                   setSlideIdx((i) => i + 1);
                 }}
                 className="rounded-full bg-white px-6 py-2.5 text-sm font-medium text-black transition hover:bg-white/85"
@@ -478,7 +479,6 @@ export function MiniCourseStudio({
                 onClick={() => {
                   unlockSound();
                   play("fact");
-                  stopSpeech();
                   setAct("game");
                 }}
                 className="rounded-full bg-gradient-to-r from-cyan-300 to-indigo-300 px-6 py-2.5 text-sm font-semibold text-slate-950 transition hover:opacity-90"
@@ -498,7 +498,7 @@ export function MiniCourseStudio({
               <p className="font-mono text-xs uppercase tracking-wider text-fuchsia-300">
                 Card {cardIdx + 1} of {course.gameCards.length} · {card.conceptTag}
               </p>
-              <p className="mt-0.5 text-sm text-white/60">Decide whether this statement is a sound practice or a classic AI/domain trap.</p>
+              <p className="mt-0.5 text-sm text-white/60">One click: decide whether this statement is a sound practice or a hidden trap.</p>
             </div>
             <div className="flex items-center gap-2 font-mono text-xs">
               <span className="rounded-full border border-white/15 bg-white/5 px-3 py-1 text-white/85">
@@ -530,7 +530,10 @@ export function MiniCourseStudio({
                       : "border-white/10 opacity-45"
               }`}
             >
-              <span className="block text-base font-semibold text-emerald-200">✓ Sound Practice</span>
+              <div className="flex items-center justify-between">
+                <span className="text-base font-semibold text-emerald-200">✓ Sound Practice</span>
+                <span className="rounded border border-white/15 px-1.5 py-0.5 font-mono text-[10px] text-white/45">Key 1</span>
+              </div>
               <span className="mt-1 block text-xs text-white/65">Protects quality, accuracy, and stakeholder constraints.</span>
             </button>
 
@@ -548,7 +551,10 @@ export function MiniCourseStudio({
                       : "border-white/10 opacity-45"
               }`}
             >
-              <span className="block text-base font-semibold text-amber-200">⚠ Hidden Trap</span>
+              <div className="flex items-center justify-between">
+                <span className="text-base font-semibold text-amber-200">⚠ Hidden Trap</span>
+                <span className="rounded border border-white/15 px-1.5 py-0.5 font-mono text-[10px] text-white/45">Key 2</span>
+              </div>
               <span className="mt-1 block text-xs text-white/65">Sounds quick and confident, yet rests on a misconception.</span>
             </button>
           </div>
@@ -586,9 +592,9 @@ export function MiniCourseStudio({
           <h2 className="mt-2 text-2xl font-bold sm:text-3xl">Step onto the desktop and lead {course.title}</h2>
           <p className="mt-3 max-w-2xl leading-relaxed text-white/75">
             You spotted <span className="font-semibold text-white">{score} of {course.gameCards.length}</span> judgment cards
-            {bestStreak > 1 ? ` (best streak: ${bestStreak} in a row)` : ""}. Now put both concepts to work with{" "}
-            <span className="text-white">{course.client.name}</span> and{" "}
-            <span className="text-white">{course.assistant.name}</span>.
+            {bestStreak > 1 ? ` (best streak: ${bestStreak} in a row)` : ""}. Every step on the simulated desktop—from interviewing{" "}
+            <span className="text-white">{course.client.name}</span> to briefing{" "}
+            <span className="text-white">{course.assistant.name}</span> and passing the Live Viva—is built around fast, interactive decision cards with zero mandatory typing.
           </p>
 
           <div className="mt-6 grid gap-3 sm:grid-cols-2">

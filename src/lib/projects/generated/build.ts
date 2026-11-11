@@ -117,6 +117,7 @@ export function buildScenario(draft: ProjectDraft, meta: { id: string; version?:
     text: draft.facts[role].text,
     cues: draft.facts[role].cues,
     reply: draft.facts[role].reply,
+    question: draft.facts[role].sampleQuestion,
   }));
 
   const requirements: ChecklistItem[] = [

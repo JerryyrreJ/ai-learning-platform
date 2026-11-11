@@ -8,6 +8,15 @@ import {
   type SimulationState,
 } from "@/lib/learning/simulation/engine";
 import type { SimulationOutcome } from "@/lib/learning/simulation/schema";
+import {
+  buildBriefComposer,
+  buildRequirementsComposer,
+  buildReviewNoteOptions,
+  buildSuggestedQuestions,
+  buildVivaOptions,
+  type ComposerOption,
+  type ComposerSlot,
+} from "./composer";
 import { normalise, type Grader, type InterviewTurn, type ProjectEvaluator } from "./evaluate";
 import type {
   ArtifactKind,
@@ -448,14 +457,18 @@ export type ProjectView = {
     asked: number;
     min: number;
     max: number;
+    suggestedQuestions: string[];
   };
   notes: string[];
   /** How many concepts the job teaches. They are named and explained in the report, after the release. */
   conceptCount: number;
   requirements: { text: string; coveredCount: number; total: number } | null;
+  requirementsComposer: ComposerSlot[] | null;
   brief: { text: string } | null;
+  briefComposer: ComposerSlot[] | null;
   viva: {
     question: string;
+    options: ComposerOption[];
     response: { text: string; rating: ProjectCard["rating"]; feedback: string; trustDelta: number } | null;
   } | null;
   work: {
@@ -465,6 +478,7 @@ export type ProjectView = {
     checks: CodeVariant["checks"];
     demo: CodeVariant["demo"];
     reasons: ProjectScenario["reviewReasons"];
+    noteOptions: ComposerOption[];
     reviews: {
       label: string;
       correct: boolean;
@@ -763,6 +777,10 @@ export function projectView(
       asked: memo.interview.turns.filter((turn) => turn.role === "learner").length,
       min: scenario.interview.minQuestions,
       max: scenario.interview.maxQuestions,
+      suggestedQuestions:
+        state.stageId === "interview" && state.status === "active"
+          ? buildSuggestedQuestions(scenario, memo.interview.turns)
+          : [],
     },
     notes: scenario.facts
       .filter((fact) => memo.interview.revealed.includes(fact.id))
@@ -777,10 +795,22 @@ export function projectView(
           total: itemsFor(scenario.requirements, track).length,
         }
       : null,
+    requirementsComposer:
+      state.stageId === "requirements" && state.status === "active"
+        ? buildRequirementsComposer(scenario, track, memo.interview.revealed)
+        : null,
     brief: memo.brief ? { text: memo.brief.text } : null,
+    briefComposer:
+      (state.stageId === "brief" || state.stageId === "brief-test") && state.status === "active"
+        ? buildBriefComposer(scenario, track, memo.interview.revealed)
+        : null,
     viva: showViva && scenario.viva
       ? {
           question: scenario.viva.question,
+          options:
+            state.stageId === "release" && state.status === "active" && !memo.viva
+              ? buildVivaOptions(scenario)
+              : [],
           response: memo.viva
             ? {
                 text: memo.viva.text,
@@ -806,6 +836,10 @@ export function projectView(
               : [],
           demo: track === "product" ? variant.demo : [],
           reasons: track === "product" ? scenario.reviewReasons : [],
+          noteOptions:
+            state.stageId === "review" && state.status === "active"
+              ? buildReviewNoteOptions(scenario, explanationItems)
+              : [],
           reviews: memo.reviews.map((review) => {
             const concept = scenario.concepts?.find((item) => item.id === review.explanation?.concept);
             const feedback = concept && review.explanation ? explanationFeedback(scenario, concept, review.explanation.covered) : null;

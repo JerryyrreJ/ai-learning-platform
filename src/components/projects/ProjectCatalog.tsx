@@ -120,7 +120,7 @@ export function ProjectCatalog({
           <p className="text-xs font-medium uppercase tracking-wider text-fuchsia-300/85">Any discipline · AI-verified</p>
           <h2 className="mt-2 text-2xl font-semibold">Generate or remix your own course</h2>
           <p className="mt-3 flex-1 text-sm leading-relaxed text-white/60">
-            Studying nursing, law, accounting, psychology, chemistry, or media? Describe your field and what you want to learn. The platform builds an AI-narrated concept primer, a Spot-the-Trap game, and a simulated desktop job with spreadsheets, clauses, SOPs, or code.
+            Studying nursing, law, accounting, psychology, chemistry, or media? Pick your field with one click and the platform builds an interactive concept primer, a Spot-the-Trap game, and a simulated desktop job with spreadsheets, clauses, SOPs, or code.
           </p>
           <div className="mt-6 flex flex-wrap gap-2.5">
             <Link href="/projects/new" className={primaryBtn}>

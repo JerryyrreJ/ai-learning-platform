@@ -115,10 +115,10 @@ export function nextStep(view: ProjectView): string | null {
     case "interview":
       return `Open Meet and take ${client}'s call`;
     case "requirements":
-      return "Open Notes and write the requirements";
+      return "Open Notes and build the requirements";
     case "brief":
     case "brief-test":
-      return `Open ${agent} and write its task`;
+      return `Open ${agent} and assemble its brief`;
     case "review":
       return view.track === "engineering"
         ? view.scenario.artifactKind && view.scenario.artifactKind !== "code"
@@ -151,26 +151,26 @@ export function guideFor(view: ProjectView): string[] {
       ];
     case "interview":
       return [
-        `${client} is on the call in Meet. Ask open questions about what goes wrong today.`,
+        `${client} is on the call in Meet. Click questions to uncover what really goes wrong.`,
         "Facts you uncover land in the column on the right of the call.",
         `Ask at least ${view.interview.min} questions. End the call when you know enough; ${client} has time for ${view.interview.max}.`,
       ];
     case "requirements":
       return [
-        "Write the requirements note in Notes, in your own words.",
-        `Say what ${deliverable} must do, what it must never do, and how you'll know it worked.`,
-        "Only what you found out on the call is in your notes. Gaps here become gaps later.",
+        "Build the requirements specification in Notes by choosing one clause per section.",
+        `Decide what ${deliverable} must do, what it must never do, and how you'll know it worked.`,
+        "Watch out for surface shortcuts—gaps here become gaps later.",
       ];
     case "brief":
     case "brief-test":
       return [
-        `Open ${agent} and write its task.`,
-        `${agent} does exactly what you ask and fills every gap with its own assumptions.`,
+        `Open ${agent} and select the directives for its brief.`,
+        `${agent} does exactly what you select and acts on any misconception you leave in.`,
         product
-          ? "Say what to make, what must never happen, and what's out of scope."
+          ? "Pick the core handling, non-negotiable guardrail, and strict scope boundary."
           : view.scenario.artifactKind && view.scenario.artifactKind !== "code"
-            ? "Name the domain rules, what must never happen, and what's out of scope."
-            : "Name the constraints, what's out of scope, and how you'll check the result (a test).",
+            ? "Select the domain rules, what must never happen, and what's out of scope."
+            : "Select the constraints, what's out of scope, and the verification check (a test).",
       ];
     case "review":
       return product

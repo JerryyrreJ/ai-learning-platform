@@ -55,7 +55,7 @@ export default async function ProjectsPage() {
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300/80">Cross-Disciplinary Studio</p>
         <h1 className="mt-2 text-4xl font-bold tracking-tight sm:text-6xl">Mini-courses &amp; simulations</h1>
         <p className="mt-4 max-w-2xl text-lg text-white/65">
-          Every course pairs an AI-narrated visual primer and a 60-second Spot-the-Trap game with a live stakeholder workday—spanning healthcare statistics, behavioural economics, privacy law, lab science, and software.
+          Every course pairs an interactive visual primer and a 60-second Spot-the-Trap game with a zero-typing simulated stakeholder workday—spanning healthcare statistics, behavioural economics, privacy law, lab science, and software.
         </p>
       </Reveal>
 

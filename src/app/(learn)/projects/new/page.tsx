@@ -37,7 +37,7 @@ export default async function NewProjectPage({
         <p className="mt-4 text-lg text-white/65">
           {remixTarget
             ? `Adapt “${remixTarget.title}” into your own discipline, workplace, or study topic. The AI rewrites the client, data/document/protocol artifact, primer cards, and live Viva—then verifies every branch.`
-            : "Pick any discipline—from clinical statistics, law, and behavioural economics to lab chemistry or software. The AI builds an interactive 3-act mini-course (narrated visual primer, trap mini-game, and simulated desktop mission) tailored to your level."}
+            : "Pick any discipline—from clinical statistics, law, and behavioural economics to lab chemistry or software. The AI builds an interactive 3-act mini-course (visual concept simulator, trap mini-game, and click-first simulated desktop mission) tailored to your level."}
         </p>
       </Reveal>
       <div className="mt-10">

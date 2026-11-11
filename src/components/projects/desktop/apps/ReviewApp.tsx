@@ -213,6 +213,7 @@ export function ReviewApp({ view, busy, send }: { view: ProjectView; busy: boole
   const [picked, setPicked] = useState<{ path: string; line: number } | null>(null);
   const [reason, setReason] = useState("");
   const [note, setNote] = useState("");
+  const [customNoteMode, setCustomNoteMode] = useState(false);
   const engineering = view.track === "engineering";
   const artifactKind = view.scenario.artifactKind;
   const isCodePr = engineering && (!artifactKind || artifactKind === "code");
@@ -220,7 +221,8 @@ export function ReviewApp({ view, busy, send }: { view: ProjectView; busy: boole
   const approve = view.actions.find((action) => action.id === "approve");
   // Where the job teaches concepts, a change request explains itself, as a real one would.
   const needsNote = view.conceptCount > 0;
-  const ready = (engineering ? Boolean(picked) : Boolean(reason)) && (!needsNote || note.trim().length >= 15);
+  const hasTarget = engineering ? Boolean(picked) : Boolean(reason);
+  const ready = hasTarget && (!needsNote || note.trim().length >= 15);
 
   if (!work) {
     return <p className="grid h-full place-items-center p-6 text-[13px] text-stone-400">Nothing to review yet. {agent}&apos;s work appears here.</p>;
@@ -336,19 +338,56 @@ export function ReviewApp({ view, busy, send }: { view: ProjectView; busy: boole
                 </div>
               </fieldset>
             )}
-            {needsNote && !fixed && (
-              <label className="mb-3 block">
-                <span className="font-medium text-stone-900">Your note for {agent}</span>
-                <span className="block text-stone-500">What goes wrong, and why? {agent} learns from the why.</span>
-                <textarea
-                  value={note}
-                  onChange={(event) => setNote(event.target.value)}
-                  maxLength={1000}
-                  rows={3}
-                  placeholder="This goes wrong when… because…"
-                  className="mt-1.5 w-full resize-none rounded-md border border-black/15 px-2.5 py-1.5 text-stone-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
-                />
-              </label>
+            {needsNote && !fixed && hasTarget && (
+              <div className="mb-3">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div>
+                    <span className="font-medium text-stone-900">Your diagnosis note for {agent}</span>
+                    <span className="ml-1.5 text-[12px] text-stone-500">Pick what goes wrong &amp; why:</span>
+                  </div>
+                  {work.noteOptions.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCustomNoteMode((v) => !v)}
+                      className="text-[11px] text-stone-500 underline-offset-2 hover:text-stone-800 hover:underline"
+                    >
+                      {customNoteMode ? "← Pick from diagnosis cards" : "Write custom note"}
+                    </button>
+                  )}
+                </div>
+
+                {!customNoteMode && work.noteOptions.length > 0 ? (
+                  <div className="mt-1.5 grid max-h-36 gap-1.5 overflow-y-auto pr-1 sm:grid-cols-2">
+                    {work.noteOptions.map((opt) => {
+                      const active = note === opt.text;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => setNote(opt.text)}
+                          aria-pressed={active}
+                          className={`rounded-md border p-2 text-left text-[12px] leading-snug transition ${
+                            active
+                              ? "border-blue-500 bg-blue-50 text-stone-900 ring-1 ring-blue-400"
+                              : "border-black/10 bg-stone-50/70 text-stone-700 hover:border-blue-300 hover:bg-blue-50/40"
+                          }`}
+                        >
+                          {opt.text}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <textarea
+                    value={note}
+                    onChange={(event) => setNote(event.target.value)}
+                    maxLength={1000}
+                    rows={2}
+                    placeholder="This goes wrong when… because…"
+                    className="mt-1.5 w-full resize-none rounded-md border border-black/15 px-2.5 py-1.5 text-stone-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+                  />
+                )}
+              </div>
             )}
             <div className="flex flex-wrap items-center gap-2">
               {!fixed && (

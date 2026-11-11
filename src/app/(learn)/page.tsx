@@ -19,8 +19,8 @@ const DESK: Record<AppId, string> = {
 const FORMATS = [
   {
     step: "Act 01",
-    title: "AI-Narrated Visual Primer",
-    text: "Animated concept diagrams, everyday mental models, and optional voice narration unpack the two core ideas before the mission starts.",
+    title: "Interactive Visual Primer",
+    text: "Click-to-compare concept simulators and everyday mental models unpack the two core domain ideas before the mission starts.",
   },
   {
     step: "Act 02",
@@ -111,7 +111,7 @@ export default function Home() {
         </Reveal>
         <Reveal delay={200}>
           <p className="mx-auto mt-6 max-w-2xl text-pretty text-lg leading-relaxed text-white/75 sm:text-xl">
-            Warm up with AI-narrated visual primers and a 60-second Spot-the-Trap game, then step into a simulated workday: interview stakeholders, brief a domain AI specialist, audit spreadsheets, legal clauses, lab SOPs, or code, and defend your work in a live Viva.
+            Warm up with interactive visual primers and a 60-second Spot-the-Trap game, then step into a click-first simulated workday: interview stakeholders, brief a domain AI specialist, audit spreadsheets, legal clauses, lab SOPs, or code, and defend your work in a live Viva.
           </p>
         </Reveal>
         <Reveal delay={300}>

@@ -4,9 +4,9 @@
 
 DevPath is a universal, cross-disciplinary GenAI mini-course and simulation platform built for **Anthropic's 4D AI Fluency** (*Delegation, Description, Discernment, Diligence*). Every built-in, instructor-created, and learner-generated course combines **three interactive formats** out of the box—with zero per-profession custom coding:
 
-1. **Act 01 · AI-Narrated Visual Primer (`/projects/[id]/learn`)**: Animated SVG/CSS concept visualisers, everyday analogies vs classic misconceptions, and Web Speech AI voice narration.
-2. **Act 02 · 60-Second Spot-the-Trap Mini-Game**: Tactile rapid-judgment cards with streak scoring and instant conceptual feedback.
-3. **Act 03 · Simulated Workday + Live Stakeholder Viva (`/projects/[id]`)**: Interview an AI stakeholder, write measurable requirements, brief a domain-specific AI specialist (*statistical analyst, policy analyst, legal-copy agent, lab-methods agent, or coding agent*), audit **polymorphic deliverables** (**Spreadsheet Tables**, **Redline Document Clauses**, **Lab/Field SOP Steps**, or **Code Diffs**), and defend your reasoning in a **Live Sign-Off Viva** before launch.
+1. **Act 01 · Interactive Visual Primer (`/projects/[id]/learn`)**: Click-to-compare SVG/CSS concept simulators (`Naive Trap` vs `Calibrated Fix`) and everyday analogies vs classic misconceptions.
+2. **Act 02 · 60-Second Spot-the-Trap Mini-Game**: Tactile rapid-judgment cards with streak scoring, keyboard shortcuts, and instant conceptual feedback.
+3. **Act 03 · Click-First Simulated Workday + Live Stakeholder Viva (`/projects/[id]`)**: Zero-typing-capable interactive cards across the entire workday—ask stakeholder discovery questions with one click, assemble measurable specifications and AI briefs from paired guardrail vs trap cards, audit **polymorphic deliverables** (**Spreadsheet Tables**, **Redline Document Clauses**, **Lab/Field SOP Steps**, or **Code Diffs**), and defend your reasoning in a **Live Sign-Off Viva** before launch.
 
 - **7 Built-In Courses Across 5 Disciplines:**
   - *Data & Healthcare:* **Ward 4B hand-gel audit** (Clinical Statistics — incidence rates vs raw counts & confounding variables; `table` audit)
