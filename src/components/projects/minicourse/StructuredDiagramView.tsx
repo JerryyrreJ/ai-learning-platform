@@ -217,12 +217,11 @@ function DiagramCanvas({
 
           <rect x="0" y="0" width={layout.width} height={layout.height} fill={`url(#${uid}-grid)`} rx="12" />
 
-          {/* Edges */}
+          {/* Edge paths */}
           {layout.edges.map((edge) => {
             const connected = activeNodeId ? edge.from === activeNodeId || edge.to === activeNodeId : false;
             const opacity = edge.dimmed ? 0.16 : activeNodeId && !connected ? 0.35 : 0.92;
             const strokeColor = TONE_PALETTE[edge.tone].edge;
-            const pillWidth = edge.label ? Math.max(46, edge.label.length * 6.4 + 14) : 0;
 
             return (
               <g key={edge.id} style={{ opacity, transition: "opacity 220ms ease" }}>
@@ -234,30 +233,6 @@ function DiagramCanvas({
                   strokeDasharray={edge.style === "dashed" ? "5 4" : undefined}
                   markerEnd={`url(#${uid}-arrow-${edge.tone})`}
                 />
-                {edge.label && (
-                  <g transform={`translate(${edge.labelX}, ${edge.labelY})`}>
-                    <rect
-                      x={-pillWidth / 2}
-                      y={-10}
-                      width={pillWidth}
-                      height={19}
-                      rx={9.5}
-                      fill="rgba(9, 13, 26, 0.92)"
-                      stroke="rgba(255, 255, 255, 0.16)"
-                      strokeWidth="1"
-                    />
-                    <text
-                      x="0"
-                      y="3.5"
-                      textAnchor="middle"
-                      fill="#e2e8f0"
-                      fontSize="10"
-                      fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
-                    >
-                      {edge.label}
-                    </text>
-                  </g>
-                )}
               </g>
             );
           })}
@@ -325,6 +300,42 @@ function DiagramCanvas({
                     {line}
                   </text>
                 ))}
+              </g>
+            );
+          })}
+
+          {/* Edge label pills painted above nodes so labels are never clipped */}
+          {layout.edges.map((edge) => {
+            if (!edge.label) return null;
+            const connected = activeNodeId ? edge.from === activeNodeId || edge.to === activeNodeId : false;
+            const opacity = edge.dimmed ? 0.12 : activeNodeId && !connected ? 0.35 : 0.96;
+            const pillWidth = Math.max(46, edge.label.length * 6.2 + 14);
+            return (
+              <g
+                key={`${edge.id}-label`}
+                transform={`translate(${edge.labelX}, ${edge.labelY})`}
+                style={{ opacity, transition: "opacity 220ms ease", pointerEvents: "none" }}
+              >
+                <rect
+                  x={-pillWidth / 2}
+                  y={-9.5}
+                  width={pillWidth}
+                  height={18}
+                  rx={9}
+                  fill="rgba(9, 13, 26, 0.94)"
+                  stroke="rgba(255, 255, 255, 0.2)"
+                  strokeWidth="1"
+                />
+                <text
+                  x="0"
+                  y="3.2"
+                  textAnchor="middle"
+                  fill="#e2e8f0"
+                  fontSize="9.5"
+                  fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace"
+                >
+                  {edge.label}
+                </text>
               </g>
             );
           })}

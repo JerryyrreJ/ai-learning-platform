@@ -81,7 +81,7 @@ const LANE_ORDER: Record<DiagramLane, number> = {
  * Produces finite SVG coordinates with zero external runtime dependencies.
  */
 export function layoutStructuredDiagram(diagram: StructuredDiagram, lens: DiagramLens = "both"): DiagramLayout {
-  const width = 760;
+  const width = 860;
   const rawNodes = diagram.nodes.slice(0, 6);
   if (rawNodes.length === 0) {
     throw new Error("Diagram contains no nodes to render.");
@@ -149,10 +149,10 @@ export function layoutStructuredDiagram(diagram: StructuredDiagram, lens: Diagra
   }
 
   const maxRowsInCol = Math.max(1, ...columns.map((c) => c.length));
-  const nodeWidth = numCols >= 4 ? 156 : numCols === 3 ? 196 : 230;
-  const nodeHeight = 72;
-  const vGap = 28;
-  const padX = 26;
+  const nodeWidth = numCols >= 4 ? 168 : numCols === 3 ? 204 : 240;
+  const nodeHeight = 76;
+  const vGap = 36;
+  const padX = 24;
   const padY = 24;
   const height = Math.max(196, padY * 2 + maxRowsInCol * nodeHeight + (maxRowsInCol - 1) * vGap);
 
