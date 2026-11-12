@@ -1,11 +1,11 @@
-import type { ArtifactKind, ProjectConcept, ProjectScenario } from "./types";
+import type { ArtifactKind, ProjectConcept, ProjectScenario, StructuredDiagram } from "./types";
 
 /*
  * Universal 3-Act Generative Mini-Course builder.
  *
  * Turns ANY ProjectScenario (built-in, instructor-customised, or student-generated
  * in any academic discipline) into a browser-safe interactive pre-simulation warm-up:
- *   Act 1: Interactive Animated Visual Primer Cards
+ *   Act 1: Interactive Animated Visual Primer Cards (with Structured SVG Node-Edge Diagrams)
  *   Act 2: 60s "Spot-the-Trap" Rapid Judgment Mini-Game
  *   Act 3: Handoff into the Live Desktop Simulation + Sign-Off Viva
  *
@@ -21,6 +21,8 @@ export interface PrimerSlide {
   title: string;
   body: string;
   diagram: DiagramKind;
+  /** Structured node-edge graph rendered by our lightweight SVG engine (0 extra tokens at read time). */
+  structuredDiagram: StructuredDiagram;
   /** Optional side-by-side callouts (e.g. Analogy vs Common Trap). */
   callouts?: {
     goodLabel: string;
@@ -98,6 +100,12 @@ function firstSentence(text: string): string {
   return match ? match[0].trim() : text.trim();
 }
 
+function clip(text: string, max: number): string {
+  const clean = text.trim().replace(/\s+/g, " ");
+  if (clean.length <= max) return clean;
+  return `${clean.slice(0, max - 1).trimEnd()}…`;
+}
+
 function deterministicOrder<T>(items: T[], seedText: string): T[] {
   let seed = 2166136261;
   for (let i = 0; i < seedText.length; i++) {
@@ -122,6 +130,197 @@ const ARTIFACT_LABEL: Record<ArtifactKind, string> = {
   steps: "step-by-step protocol SOP",
 };
 
+function buildMissionDiagram(scenario: ProjectScenario, artifactKind: ArtifactKind): StructuredDiagram {
+  return {
+    caption: `Mission workflow: leading ${scenario.assistant.name} on ${scenario.client.organisation}'s deliverable`,
+    nodes: [
+      {
+        id: "client",
+        label: scenario.client.name,
+        detail: clip(`${scenario.client.role} · ${scenario.client.organisation}`, 46),
+        tone: "neutral",
+        lane: "shared",
+      },
+      {
+        id: "rush-brief",
+        label: "Forward email blind",
+        detail: `Skip discovery & brief ${scenario.assistant.name}`,
+        tone: "trap",
+        lane: "trap",
+      },
+      {
+        id: "flawed-ship",
+        label: "Hidden flaw ships",
+        detail: "Builds surface request, misses rules",
+        tone: "trap",
+        lane: "trap",
+      },
+      {
+        id: "lead-audit",
+        label: "Interview & guardrails",
+        detail: "Uncover root problem, rule & metric",
+        tone: "accent",
+        lane: "sound",
+      },
+      {
+        id: "verified-work",
+        label: `Audit ${ARTIFACT_LABEL[artifactKind]}`,
+        detail: `${scenario.assistant.name} builds, you verify`,
+        tone: "sound",
+        lane: "sound",
+      },
+    ],
+    edges: [
+      { from: "client", to: "rush-brief", label: "Rushed", style: "dashed" },
+      { from: "rush-brief", to: "flawed-ship", label: "Unchecked" },
+      { from: "client", to: "lead-audit", label: "Ask first" },
+      { from: "lead-audit", to: "verified-work", label: "Explicit brief" },
+    ],
+  };
+}
+
+function synthesiseConceptDiagram(concept: ProjectConcept, domain: string): StructuredDiagram {
+  if (concept.diagram && concept.diagram.nodes.length >= 3 && concept.diagram.edges.length >= 2) {
+    return concept.diagram;
+  }
+  return {
+    caption: `${concept.name}: naive shortcut vs calibrated ${domain.toLowerCase()} practice`,
+    nodes: [
+      {
+        id: "context",
+        label: clip(concept.name, 34),
+        detail: clip(domain, 42),
+        tone: "neutral",
+        lane: "shared",
+      },
+      {
+        id: "naive",
+        label: "Naive assumption",
+        detail: clip(concept.misconception, 64),
+        tone: "trap",
+        lane: "trap",
+      },
+      {
+        id: "trap-out",
+        label: "Silent distortion",
+        detail: "Looks plausible, fails in practice",
+        tone: "trap",
+        lane: "trap",
+      },
+      {
+        id: "method",
+        label: "Calibrated check",
+        detail: clip(firstSentence(concept.explanation), 64),
+        tone: "accent",
+        lane: "sound",
+      },
+      {
+        id: "sound-out",
+        label: "Verified on the job",
+        detail: clip(concept.inTheJob, 64),
+        tone: "sound",
+        lane: "sound",
+      },
+    ],
+    edges: [
+      { from: "context", to: "naive", label: "Shortcut" },
+      { from: "naive", to: "trap-out", label: "Unchecked" },
+      { from: "context", to: "method", label: "Apply rule" },
+      { from: "method", to: "sound-out", label: "Holds up" },
+    ],
+  };
+}
+
+function buildMentalModelDiagram(concept: ProjectConcept, assistantName: string): StructuredDiagram {
+  return {
+    caption: `Spotting ${concept.name.toLowerCase()} when reviewing ${assistantName}'s draft`,
+    nodes: [
+      {
+        id: "draft",
+        label: `${assistantName}'s fast draft`,
+        detail: "Polished wording or numbers",
+        tone: "neutral",
+        lane: "shared",
+      },
+      {
+        id: "misconception",
+        label: "Classic misconception",
+        detail: clip(concept.misconception, 66),
+        tone: "trap",
+        lane: "trap",
+      },
+      {
+        id: "approve-blind",
+        label: "Approve at face value",
+        detail: "Flaw reaches real stakeholders",
+        tone: "trap",
+        lane: "trap",
+      },
+      {
+        id: "analogy",
+        label: "Mental model check",
+        detail: clip(concept.bridge, 66),
+        tone: "accent",
+        lane: "sound",
+      },
+      {
+        id: "catch-fix",
+        label: "Send back with reason",
+        detail: clip(concept.inTheJob, 66),
+        tone: "sound",
+        lane: "sound",
+      },
+    ],
+    edges: [
+      { from: "draft", to: "misconception", label: "Surface scan", style: "dashed" },
+      { from: "misconception", to: "approve-blind", label: "Missed" },
+      { from: "draft", to: "analogy", label: "Audit entry" },
+      { from: "analogy", to: "catch-fix", label: "Caught" },
+    ],
+  };
+}
+
+function buildFluencyDiagram(assistantName: string): StructuredDiagram {
+  return {
+    caption: `Anthropic 4D AI Fluency loop across your two-week simulation`,
+    nodes: [
+      {
+        id: "d1",
+        label: "01 Delegation",
+        detail: "Interview client before briefing AI",
+        tone: "neutral",
+        lane: "shared",
+      },
+      {
+        id: "d2",
+        label: "02 Description",
+        detail: `Give ${assistantName} targets & guardrails`,
+        tone: "accent",
+        lane: "shared",
+      },
+      {
+        id: "d3",
+        label: "03 Discernment",
+        detail: "Audit artifact & explain any flaw",
+        tone: "accent",
+        lane: "shared",
+      },
+      {
+        id: "d4",
+        label: "04 Diligence",
+        detail: "Defend in Viva & measure rollout",
+        tone: "sound",
+        lane: "shared",
+      },
+    ],
+    edges: [
+      { from: "d1", to: "d2", label: "Facts" },
+      { from: "d2", to: "d3", label: "Build" },
+      { from: "d3", to: "d4", label: "Sign-off" },
+    ],
+  };
+}
+
 export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
   const artifactKind: ArtifactKind = scenario.artifactKind ?? "code";
   const deliverable = scenario.words.deliverable || "the deliverable";
@@ -135,6 +334,7 @@ export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
       title: scenario.title,
       body: `${scenario.summary} You can review ${scenario.assistant.name}'s work in Overview mode or inspect the ${ARTIFACT_LABEL[artifactKind]} entry by entry.`,
       diagram: "cast",
+      structuredDiagram: buildMissionDiagram(scenario, artifactKind),
       callouts: {
         goodLabel: "Your Stakeholder",
         goodText: `${scenario.client.name} (${scenario.client.role}, ${scenario.client.organisation}) knows the real-world context—ask open questions before promising a solution.`,
@@ -153,6 +353,7 @@ export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
       title: concept.name,
       body: concept.explanation,
       diagram,
+      structuredDiagram: synthesiseConceptDiagram(concept, domain),
       watchFor: concept.inTheJob,
     });
     slides.push({
@@ -161,6 +362,7 @@ export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
       title: `Spotting ${concept.name.toLowerCase()} in the wild`,
       body: `Fast AI drafts often sound persuasive even when built on a textbook misconception. Compare the everyday mental model against the trap ${scenario.assistant.name} can fall into.`,
       diagram,
+      structuredDiagram: buildMentalModelDiagram(concept, scenario.assistant.name),
       callouts: {
         goodLabel: "Everyday Analogy",
         goodText: concept.bridge,
@@ -177,6 +379,7 @@ export function buildMiniCourse(scenario: ProjectScenario): MiniCourse {
     title: `How to lead ${scenario.assistant.name} on ${deliverable}`,
     body: "Your simulation run is evaluated on four AI Fluency habits—from deciding when NOT to delegate yet, all the way to defending your choices in a live stakeholder Viva before sign-off.",
     diagram: "fluency",
+    structuredDiagram: buildFluencyDiagram(scenario.assistant.name),
     callouts: {
       goodLabel: "Before & During Build",
       goodText: "1. Interview the client first (Delegation) · 2. State measurable targets & guardrails in your brief (Description).",

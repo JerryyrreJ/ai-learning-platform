@@ -324,6 +324,22 @@ export const wardGelAuditDraft: ProjectDraft = {
       inTheJob:
         "Two bays were closed in October, shrinking total bed-days from 600 to 250. Check whether each version divides cases by patient-day occupancy.",
       cues: ["patient-day", "bed-day", "occupancy", "denominator", "raw"],
+      diagram: {
+        caption: "Comparing raw monthly case counts vs exposure-adjusted patient-day rates",
+        nodes: [
+          { id: "census", label: "Oct bays closed", detail: "600 → 250 patient-days", tone: "neutral", lane: "shared" },
+          { id: "raw-count", label: "Compare raw totals", detail: "12 cases → 8 cases", tone: "trap", lane: "trap" },
+          { id: "false-drop", label: "False '-33% drop'", detail: "Hides smaller denominator", tone: "trap", lane: "trap" },
+          { id: "rate-calc", label: "Divide by 1,000 bed-days", detail: "Cases ÷ occupied bed-days", tone: "accent", lane: "sound" },
+          { id: "true-rate", label: "True rate revealed", detail: "20.0 → 32.0 per 1,000 days", tone: "sound", lane: "sound" },
+        ],
+        edges: [
+          { from: "census", to: "raw-count", label: "Ignore exposure" },
+          { from: "raw-count", to: "false-drop", label: "Misleading" },
+          { from: "census", to: "rate-calc", label: "Adjust baseline" },
+          { from: "rate-calc", to: "true-rate", label: "Calibrated" },
+        ],
+      },
     },
     rule: {
       name: "Confounding variables",
@@ -335,6 +351,22 @@ export const wardGelAuditDraft: ProjectDraft = {
       inTheJob:
         "Ward 4B took post-op surgical transfers with central lines in October. Check whether surgical transfers are stratified separately from general medical beds.",
       cues: ["surgical", "case mix", "central line", "stratify", "transfer"],
+      diagram: {
+        caption: "Pooling mixed admissions vs stratifying baseline risk cohorts",
+        nodes: [
+          { id: "mix", label: "Oct case-mix shift", detail: "Surgical central-line transfers", tone: "neutral", lane: "shared" },
+          { id: "pooled", label: "Single pooled ward row", detail: "Blends medical + surgical", tone: "trap", lane: "trap" },
+          { id: "blamed", label: "Blames routine nursing", detail: "Confounder distorts trend", tone: "trap", lane: "trap" },
+          { id: "split", label: "Stratify by cohort", detail: "Separate medical vs surgical", tone: "accent", lane: "sound" },
+          { id: "clear", label: "Medical steady at 20.0", detail: "80.0 isolated to transfers", tone: "sound", lane: "sound" },
+        ],
+        edges: [
+          { from: "mix", to: "pooled", label: "Blend cohorts" },
+          { from: "pooled", to: "blamed", label: "Confounded" },
+          { from: "mix", to: "split", label: "Stratify" },
+          { from: "split", to: "clear", label: "Fair audit" },
+        ],
+      },
     },
   },
   artifact: {

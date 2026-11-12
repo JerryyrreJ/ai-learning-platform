@@ -122,6 +122,7 @@ Universal domain support (works for ANY subject — sciences, business, humaniti
   or "steps" for chemistry/biology/clinical/operations protocols (4-6 ordered procedure steps).
   In missesProblem, missesRule and scopeCreep, set flawedLine (1-based) to the single entry carrying that version's flaw or scope creep, without using tell-words ("because", "fails to", "ignoring").
 - Include viva.question: one pointed sign-off question in the client's voice asking what could go wrong and how the rollout verifies success, without naming the concepts.
+- Include diagram on each concept (concepts.problem.diagram and concepts.rule.diagram): 4 or 5 nodes and 4 edges with unique short node ids, contrasting a shared starting situation (lane "shared", tone "neutral") branching into the naive misconception path (lane "trap", tone "trap") versus the calibrated method (lane "sound", tone "accent" then "sound"). Every edge.from and edge.to must match a node.id in that diagram.
 
 Counts: exactly 3 vagueReplies; exactly 3 demo steps per deliverable; 4 to 12 cues per fact;
 1 or 2 cue groups per checklist item, each with 1 to 10 alternatives.
