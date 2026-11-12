@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { BUCKET_META, ROLE_DEFAULT_QUOTA, type ActiveAiBucket, type QuotaOverrides } from "@/lib/ai/quota";
+import { BUCKET_META, ROLE_DEFAULT_QUOTA, type ActiveAiBucket, type QuotaOverrides } from "@/lib/ai/quota-shared";
 
 function parseCap(raw: string): number | null | "invalid" {
   const trimmed = raw.trim();

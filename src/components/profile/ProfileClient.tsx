@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { glass } from "@/components/home/glass";
-import type { QuotaOverrides } from "@/lib/ai/quota";
+import type { QuotaOverrides } from "@/lib/ai/quota-shared";
 import {
   BACKGROUND_PRESETS,
   LEVEL_LABELS,

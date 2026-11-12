@@ -5,7 +5,7 @@ import {
   type HourlyQuotaPoint,
   type QuotaOverrides,
   type StudentQuotaUsageRow,
-} from "@/lib/ai/quota";
+} from "@/lib/ai/quota-shared";
 
 /**
  * Radial SVG Ring Gauges for current-hour remaining vs limit across the 3 AI buckets.

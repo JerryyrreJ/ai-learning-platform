@@ -8,7 +8,7 @@ import {
   FEEDBACK_KINDS,
   type FeedbackKind,
   type FeedbackSurface,
-} from "@/lib/feedback";
+} from "@/lib/feedback-shared";
 
 const QUICK_REASONS: Record<FeedbackKind, string[]> = {
   content_error: [

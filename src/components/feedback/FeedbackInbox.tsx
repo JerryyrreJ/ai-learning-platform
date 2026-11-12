@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { glass } from "@/components/home/glass";
-import { FEEDBACK_KIND_LABELS, type FeedbackItem, type FeedbackKind, type FeedbackStatus } from "@/lib/feedback";
+import { FEEDBACK_KIND_LABELS, type FeedbackItem, type FeedbackKind, type FeedbackStatus } from "@/lib/feedback-shared";
 
 const KIND_BADGE: Record<FeedbackKind, string> = {
   diagram_broken: "border-amber-300/35 bg-amber-400/15 text-amber-100",

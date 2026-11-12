@@ -3,7 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { glass } from "@/components/home/glass";
-import { BUCKET_META, ROLE_DEFAULT_QUOTA, type ActiveAiBucket, type QuotaOverrides } from "@/lib/ai/quota";
+import { BUCKET_META, ROLE_DEFAULT_QUOTA, type ActiveAiBucket, type QuotaOverrides } from "@/lib/ai/quota-shared";
 
 const PRESETS: Array<{ label: string; sub: string; values: QuotaOverrides }> = [
   {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import type { UserQuotaSummary } from "@/lib/ai/quota";
+import type { UserQuotaSummary } from "@/lib/ai/quota-shared";
 import { useAuth } from "@/lib/auth-store";
 import { getSupabase, isSupabaseConfigured } from "@/lib/supabase/client";
 
