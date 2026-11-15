@@ -14,6 +14,15 @@ Each job rests on two concepts of its subject, and the AI coding agent gets them
 
 COMP5241 group project, The Hong Kong Polytechnic University.
 
+## Team
+
+| Member | Main contributions |
+|---|---|
+| [Mihaivich](https://github.com/Mihaivich) | Project lead: requirements and priorities, and reviewed and merged every PR. Rebuilt the platform around project simulations; Gemini grading with the keyword fallback; project generation for any subject with automatic checks; concepts, teach-back, the learner profile and the report; the Tidewater, ParcelPal and Ward 4B projects; the instructor and admin pages. |
+| [JerryyrreJ](https://github.com/JerryyrreJ) | The first general course platform: course studio, learning loop, learner and instructor workspaces, learning-preference onboarding. The Supabase foundation: local config, sign-in email templates, AI quotas and saved simulation runs. |
+| [Cobblepot2](https://github.com/Cobblepot2) | Testing; fixes for lost progress after a refresh and lost drafts after minimising an app; a fix that stops stale saves overwriting class assignments (in review). |
+| Team member 4 | No code contributions. |
+
 ## How a project works
 
 Every project runs on the same desktop with six apps. The client, the problem and the stakes change from project to project; the workflow stays the same.
@@ -95,6 +104,32 @@ A run usually makes 4 to 6 requests (about half the interview questions, plus th
 | Instructor classes: join code, assigned projects, each student's progress, concepts and teach-back | Done |
 | Instructors create projects from their teaching material, customise existing ones with AI, edit the words by hand (checked on save) and assign them to classes | Done |
 
+## Testing
+
+All 93 unit tests on `main` pass (`npm test`), and every project, built-in or generated, passes the same automatic playthrough before anyone can play it.
+
+| Layer | What it checks | Where |
+|---|---|---|
+| Unit tests | State machine, grading, keyword fallback, report, API error mapping, quotas, class and admin role rules | `tests/*.test.ts` |
+| Project checks | Every fact can be asked about; the sample answers cover every checklist item; a perfect run succeeds at trust 10; every flawed version fails on a full release, is caught by a pilot and is fixed when sent back for the right reason | `validate.ts`, `tests/builtin.test.ts`, `tests/generated.test.ts` |
+| Real AI checks | Scripted runs of Tidewater and ParcelPal against Gemini: all 16 call questions and 6 briefs graded as planned; of 8 teach-back notes, all 4 weak ones rated weak and 2 of the 4 strong ones rated strong. This also found a keyword bug in ParcelPal. | Run by hand before release |
+| Browser checks | Every PR played locally before merging: the desktop, the report, the class page, a second account joining a class, an admin changing a role | Each PR description |
+| Database checks | Migrations and row-level security on a local Postgres | `npm run test:postgres` |
+
+### Known issues
+
+- **Keyword fallback is stricter than the AI.** A natural question that doesn't use the fact's words gets a vague reply.
+- **Teach-back grading varies a little between models.** A strong note is sometimes rated mixed.
+- **Gemini's free tier** allows about 20 project generations a day on `gemini-3.5-flash` before the lighter models take over, and in some regions the API is unavailable, so grading falls back to keywords.
+- **No automated browser tests.** The desktop is checked by playing it.
+- **The first administrator** has to be set with one SQL statement (see Supabase below).
+
+### Future work
+
+- Merge teammates' PRs once they pass review: cross-disciplinary projects, AI quotas per class, a community gallery and click-to-choose input.
+- Test with real students to measure learning, not only playability.
+- Add automated browser tests for the desktop and the instructor pages.
+
 ## Tech stack
 
 - Next.js 15 (App Router), TypeScript, Tailwind CSS 4
@@ -173,6 +208,7 @@ Fill in `.env.local` before signing in:
 | `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Sign-in |
 | `SUPABASE_SERVICE_ROLE_KEY` | Saving project runs (server only, never prefix it with `NEXT_PUBLIC_`) |
 | `GEMINI_API_KEY`, `GEMINI_MODEL`, `GEMINI_FALLBACK_MODEL` | The AI evaluator. Without a key, everything is graded by keywords. |
+| `GEMINI_GENERATION_MODEL` | Writing new projects (default `gemini-3.5-flash`; play-time models take over when it's unavailable) |
 
 ### Supabase
 
